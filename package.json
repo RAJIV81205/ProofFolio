@@ -1,0 +1,30 @@
+{
+  "name": "credzk",
+  "version": "1.0.0",
+  "description": "ZK Academic Credential Verifier — Midnight Hackathon",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compile":            "compact compile contracts/credential_verifier.compact contracts/managed/credential_verifier",
+    "start-proof-server": "docker run -p 6300:6300 midnightntwrk/proof-server:latest midnight-proof-server -v",
+    "deploy":             "npx tsx src/deploy.ts",
+    "dev":                "cd frontend && npm run dev",
+    "build":              "cd frontend && npm run build",
+    "typecheck":          "tsc --noEmit"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime":                    "^0.3.0",
+    "@midnight-ntwrk/midnight-js-types":                  "^0.3.0",
+    "@midnight-ntwrk/midnight-js-node-zk-config-provider":"^0.3.0",
+    "@midnight-ntwrk/midnight-js-network-id":             "^0.3.0",
+    "@midnight-ntwrk/dapp-connector-api":                 "^0.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "tsx":        "^4.0.0",
+    "@types/node":"^20.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
