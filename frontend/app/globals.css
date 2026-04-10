@@ -1,26 +1,138 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f8f4;
+  --foreground: #10151f;
+  --surface: #ffffff;
+  --muted: #5b667a;
+  --line: #d8d8cd;
+  --brand: #0d9488;
+  --brand-dark: #0f766e;
+  --accent: #f59e0b;
+  --hero-1: #fef3c7;
+  --hero-2: #cffafe;
+  --hero-3: #dbeafe;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'Avenir Next', 'Manrope', 'Nunito Sans', 'Segoe UI', sans-serif;
+  --font-mono: 'Space Mono', 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 12% -20%, var(--hero-1) 0, transparent 48%),
+    radial-gradient(circle at 100% 10%, var(--hero-2) 0, transparent 42%),
+    radial-gradient(circle at 50% 120%, var(--hero-3) 0, transparent 50%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: 'Clash Display', 'Sora', 'Poppins', var(--font-sans), sans-serif;
+}
+
+.app-shell {
+  margin-inline: auto;
+  width: min(1160px, calc(100% - 2.25rem));
+  padding-block: 1.5rem 3rem;
+}
+
+.glass-card {
+  border: 1px solid color-mix(in oklab, var(--line) 84%, white 16%);
+  background: color-mix(in oklab, var(--surface) 90%, white 10%);
+  backdrop-filter: blur(8px);
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 26px rgb(16 21 31 / 7%);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--line) 70%, white 30%);
+  background: rgb(255 255 255 / 65%);
+  padding: 0.42rem 0.82rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.78rem;
+  background: linear-gradient(120deg, var(--brand), var(--brand-dark));
+  color: white;
+  border: 1px solid color-mix(in oklab, var(--brand-dark) 80%, black 20%);
+  padding: 0.66rem 1.05rem;
+  font-weight: 600;
+  transition: transform 120ms ease, box-shadow 150ms ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgb(13 148 136 / 24%);
+}
+
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.78rem;
+  border: 1px solid var(--line);
+  background: rgb(255 255 255 / 76%);
+  color: var(--foreground);
+  padding: 0.62rem 0.95rem;
+  font-weight: 600;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.field-control {
+  margin-top: 0.42rem;
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1px solid var(--line);
+  background: rgb(255 255 255 / 90%);
+  padding: 0.7rem 0.8rem;
+  font-size: 0.95rem;
+}
+
+.field-control:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--brand) 40%, white 60%);
+  outline-offset: 0;
 }

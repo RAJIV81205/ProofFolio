@@ -5,24 +5,45 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "compile":            "compact compile contracts/credential_verifier.compact contracts/managed/credential_verifier",
-    "start-proof-server": "docker run -p 6300:6300 midnightntwrk/proof-server:latest midnight-proof-server -v",
-    "deploy":             "npx tsx src/deploy.ts",
-    "dev":                "cd frontend && npm run dev",
-    "build":              "cd frontend && npm run build",
-    "typecheck":          "tsc --noEmit"
+    "compile": "compact compile contracts/credential_verifier.compact contracts/managed/credential_verifier",
+    "start-proof-server": "docker run --rm --name credzk-proof-server -p 6300:6300 midnightntwrk/proof-server:8.0.3 -- midnight-proof-server -v",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:non-interactive": "node scripts/deploy.mjs --seed $MIDNIGHT_SEED --admin-key $CREDZK_ADMIN_KEY",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@midnight-ntwrk/compact-runtime":                    "^0.3.0",
-    "@midnight-ntwrk/midnight-js-types":                  "^0.3.0",
-    "@midnight-ntwrk/midnight-js-node-zk-config-provider":"^0.3.0",
-    "@midnight-ntwrk/midnight-js-network-id":             "^0.3.0",
-    "@midnight-ntwrk/dapp-connector-api":                 "^0.3.0"
+    "@midnight-ntwrk/compact-js": "^2.5.0",
+    "@midnight-ntwrk/compact-runtime": "^0.15.0",
+    "@midnight-ntwrk/dapp-connector-api": "^4.0.1",
+    "@midnight-ntwrk/ledger-v8": "^8.0.3",
+    "@midnight-ntwrk/midnight-js": "^4.0.4",
+    "@midnight-ntwrk/midnight-js-contracts": "^4.0.4",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "^4.0.4",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "^4.0.4",
+    "@midnight-ntwrk/midnight-js-level-private-state-provider": "^4.0.4",
+    "@midnight-ntwrk/midnight-js-network-id": "^4.0.4",
+    "@midnight-ntwrk/midnight-js-node-zk-config-provider": "^4.0.4",
+    "@midnight-ntwrk/midnight-js-types": "^4.0.4",
+    "@midnight-ntwrk/midnight-js-utils": "^4.0.4",
+    "@midnight-ntwrk/wallet-sdk-address-format": "^3.1.0",
+    "@midnight-ntwrk/wallet-sdk-dust-wallet": "^3.0.0",
+    "@midnight-ntwrk/wallet-sdk-facade": "^3.0.0",
+    "@midnight-ntwrk/wallet-sdk-hd": "^3.0.1",
+    "@midnight-ntwrk/wallet-sdk-shielded": "^2.1.0",
+    "@midnight-ntwrk/wallet-sdk-unshielded-wallet": "^2.1.0",
+    "rxjs": "^7.8.2",
+    "ws": "^8.19.0"
+  },
+  "overrides": {
+    "smoldot": "npm:@aspect-build/empty@0.0.0"
   },
   "devDependencies": {
+    "@types/ws": "^8.18.1",
     "typescript": "^5.4.0",
-    "tsx":        "^4.0.0",
-    "@types/node":"^20.0.0"
+    "tsx": "^4.0.0",
+    "@types/node": "^20.0.0"
   },
   "engines": {
     "node": ">=22.0.0"

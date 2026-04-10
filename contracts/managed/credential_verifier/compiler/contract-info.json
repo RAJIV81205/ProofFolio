@@ -1,0 +1,299 @@
+{
+  "compiler-version": "0.30.0",
+  "language-version": "0.22.0",
+  "runtime-version": "0.15.0",
+  "circuits": [
+    {
+      "name": "registerIssuer",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "issuerPk",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "attestationHash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "deregisterIssuer",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "issuerPk",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "issueCredential",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "payload",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "nonce",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "revokeCredential",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "commitment",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "presentCredential",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "verifierChallenge",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "isAuthorizedIssuer",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "issuerPk",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "isTrustedIssuer",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "issuerPk",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "attestationHash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "isCredentialRevoked",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "commitment",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "isPresentationNullifierUsed",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "presentationNullifier",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    }
+  ],
+  "witnesses": [
+    {
+      "name": "adminSecretKey",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "issuerSecretKey",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "studentSecretKey",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "credentialPayload",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "credentialNonce",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "findCredentialPath",
+      "arguments": [
+        {
+          "name": "commitment",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result type": {
+        "type-name": "Struct",
+        "name": "MerkleTreePath",
+        "elements": [
+          {
+            "name": "leaf",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          },
+          {
+            "name": "path",
+            "type": {
+              "type-name": "Vector",
+              "length": 14,
+              "type": {
+                "type-name": "Struct",
+                "name": "MerkleTreePathEntry",
+                "elements": [
+                  {
+                    "name": "sibling",
+                    "type": {
+                      "type-name": "Struct",
+                      "name": "MerkleTreeDigest",
+                      "elements": [
+                        {
+                          "name": "field",
+                          "type": {
+                            "type-name": "Field"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "goes_left",
+                    "type": {
+                      "type-name": "Boolean"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "contracts": [
+  ]
+}

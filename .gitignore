@@ -1,4 +1,8 @@
 node_modules
 dist
-buils
+build
 .env
+deployment.json
+frontend/.env.local
+midnight-level-db
+frontend/.data/admin-store.json
