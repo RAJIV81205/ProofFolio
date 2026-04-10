@@ -18,7 +18,7 @@ const degreeOptions = [
   { value: DegreeType.MSc, label: 'M.Sc' },
 ];
 
-export default function UniversityClient({ adminUsername }: { adminUsername: string }) {
+export default function UniversityClient() {
   const wallet = useWallet();
   const contract = useContract(CONTRACT_ADDRESS, wallet.serviceUriConfig);
   const initialSession = readTestingSession();
@@ -145,11 +145,13 @@ export default function UniversityClient({ adminUsername }: { adminUsername: str
         <div>
           <p className="pill">University Issuer Portal</p>
           <h1 className="mt-3 text-3xl font-bold text-slate-900">Private Credential Issuance</h1>
-          <p className="mt-1 text-sm text-slate-600">Protected by admin session for {adminUsername}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Login with wallet. Issuing is enabled only after admin approves your application.
+          </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/admin" className="btn-ghost text-sm">
-            Admin Panel
+          <Link href="/university/apply" className="btn-ghost text-sm">
+            Apply for Activation
           </Link>
           <Link href="/" className="btn-ghost text-sm">
             ← Back
@@ -160,10 +162,17 @@ export default function UniversityClient({ adminUsername }: { adminUsername: str
       <div className="glass-card p-6 md:p-7">
         {!wallet.isConnected ? (
           <div>
-            <p className="text-slate-700">Connect your approved issuer wallet to continue.</p>
-            <button onClick={wallet.connect} disabled={wallet.connecting} className="btn-primary mt-4">
-              {wallet.connecting ? 'Connecting...' : 'Connect Wallet'}
-            </button>
+            <p className="text-slate-700">
+              Connect your university wallet to login. If your wallet is not active yet, submit an application.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={wallet.connect} disabled={wallet.connecting} className="btn-primary">
+                {wallet.connecting ? 'Connecting...' : 'Login with Wallet'}
+              </button>
+              <Link href="/university/apply" className="btn-ghost">
+                Apply for Activation
+              </Link>
+            </div>
             {wallet.error && <p className="mt-3 text-sm text-rose-700">{wallet.error}</p>}
           </div>
         ) : (

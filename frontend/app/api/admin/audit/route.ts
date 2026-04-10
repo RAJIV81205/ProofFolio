@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { appendAuditLog, listAuditLogs } from '@/lib/server/adminStore';
+import { appendAuditLog, isIssuerAllowed, listAuditLogs } from '@/lib/server/adminStore';
 import { getAdminSessionFromServerCookies } from '@/lib/server/auth';
 
 async function requireAdmin() {
@@ -19,11 +19,6 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await requireAdmin();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const body = (await req.json()) as {
       action?: 'issue_credential';
@@ -46,10 +41,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'walletAddress is required.' }, { status: 400 });
     }
 
+    const session = await requireAdmin();
+    if (!session) {
+      const approvedIssuer = await isIssuerAllowed(walletAddress);
+      if (!approvedIssuer) {
+        return NextResponse.json(
+          { error: 'Unauthorized. Wallet is not an approved university issuer.' },
+          { status: 401 },
+        );
+      }
+    }
+
     await appendAuditLog({
       action: 'issue_credential',
       walletAddress,
-      actor: session.username,
+      actor: session?.username ?? `issuer:${walletAddress.slice(0, 10)}`,
       metadata: body.metadata,
     });
 
