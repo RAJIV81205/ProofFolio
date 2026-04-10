@@ -33,6 +33,9 @@ export default function UniversityClient({ adminUsername }: { adminUsername: str
   const [issuerAuthorized, setIssuerAuthorized] = useState(false);
   const [issuerCheckLoading, setIssuerCheckLoading] = useState(false);
   const [issuerStatusMessage, setIssuerStatusMessage] = useState<string | null>(null);
+  const [applicationStatus, setApplicationStatus] = useState<
+    'pending' | 'approved' | 'rejected' | 'none'
+  >('none');
 
   const [result, setResult] = useState<{
     txHash: string;
@@ -53,24 +56,38 @@ export default function UniversityClient({ adminUsername }: { adminUsername: str
       setIssuerCheckLoading(true);
       setIssuerStatusMessage(null);
       try {
-        const res = await fetch(
-          `/api/admin/issuers/authorized?wallet=${encodeURIComponent(wallet.walletAddress)}`,
-          { method: 'GET', cache: 'no-store' },
-        );
-        const payload = (await res.json()) as { authorized?: boolean; error?: string };
+        const res = await fetch(`/api/university/applications/status?wallet=${encodeURIComponent(wallet.walletAddress)}`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const payload = (await res.json()) as {
+          authorized?: boolean;
+          error?: string;
+          application?: { status?: 'pending' | 'approved' | 'rejected' } | null;
+        };
 
         if (!res.ok) {
           throw new Error(payload.error ?? 'Unable to validate issuer wallet');
         }
 
         setIssuerAuthorized(Boolean(payload.authorized));
-        if (!payload.authorized) {
+        const latestStatus = payload.application?.status ?? 'none';
+        setApplicationStatus(latestStatus);
+
+        if (payload.authorized) {
+          setIssuerStatusMessage('Wallet is approved and can issue credentials.');
+        } else if (latestStatus === 'pending') {
+          setIssuerStatusMessage('Application is pending admin review. Issuance is blocked until approval.');
+        } else if (latestStatus === 'rejected') {
+          setIssuerStatusMessage('Application was rejected. Submit a new application with updated details.');
+        } else {
           setIssuerStatusMessage(
-            'This wallet is not approved by admin. Add it in the Admin Panel to enable issuance.',
+            'No approved application found for this wallet. Submit the university application first.',
           );
         }
       } catch (err) {
         setIssuerAuthorized(false);
+        setApplicationStatus('none');
         setIssuerStatusMessage(err instanceof Error ? err.message : 'Unable to validate wallet authorization.');
       } finally {
         setIssuerCheckLoading(false);
@@ -159,7 +176,17 @@ export default function UniversityClient({ adminUsername }: { adminUsername: str
               ) : issuerAuthorized ? (
                 <p className="mt-2 text-xs font-semibold text-emerald-700">Wallet is admin-approved for issuance.</p>
               ) : (
-                <p className="mt-2 text-xs font-semibold text-rose-700">{issuerStatusMessage ?? 'Wallet not authorized.'}</p>
+                <div className="mt-2">
+                  <p className="text-xs font-semibold text-rose-700">{issuerStatusMessage ?? 'Wallet not authorized.'}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Link href="/university/apply" className="btn-ghost border-amber-200 text-xs text-amber-800">
+                      Submit / Update Application
+                    </Link>
+                    {applicationStatus !== 'none' && (
+                      <span className="pill text-[11px]">Current status: {applicationStatus}</span>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 

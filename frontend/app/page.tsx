@@ -36,6 +36,13 @@ const PORTALS = [
     stat:  'Role-gated controls',
     cls:   'p3',
   },
+  {
+    idx: '05', href: '/university/apply', role: 'Onboarding',
+    title: 'University Application',
+    desc:  'Submit institution details for admin approval. Issuance rights are enabled only after verification.',
+    stat:  'Approval workflow',
+    cls:   'p1',
+  },
 ] as const;
 
 const STATS = [
@@ -85,14 +92,11 @@ function StatTile({ value, label, sub }: { value: string; label: string; sub: st
 
 // ─── page ────────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
   return (
     <>
       <style>{CSS}</style>
 
-      <div className={`wrap ${mounted ? 'mounted' : ''}`}>
+      <div className="wrap mounted">
 
         {/* NAV */}
         <nav>
