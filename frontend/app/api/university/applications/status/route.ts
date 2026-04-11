@@ -19,7 +19,14 @@ export async function GET(req: Request) {
       authorized,
       application: latestApplication,
     });
-  } catch {
-    return NextResponse.json({ authorized: false, application: null });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        authorized: false,
+        application: null,
+        error: error instanceof Error ? error.message : 'Unable to resolve application status.',
+      },
+      { status: 500 },
+    );
   }
 }

@@ -100,11 +100,11 @@ export function generateNonce(): Uint8Array {
  */
 export function createStudentWitnesses(inputs: StudentWitnessInputs) {
   return {
-    studentSecretKey: (_ctx: WitnessContext) => inputs.studentSecretKey,
+    studentSecretKey: (ctx: WitnessContext) => [ctx.privateState, inputs.studentSecretKey],
 
-    credentialPayload: (_ctx: WitnessContext) => inputs.credentialPayload,
+    credentialPayload: (ctx: WitnessContext) => [ctx.privateState, inputs.credentialPayload],
 
-    credentialNonce: (_ctx: WitnessContext) => inputs.credentialNonce,
+    credentialNonce: (ctx: WitnessContext) => [ctx.privateState, inputs.credentialNonce],
 
     // The JS SDK gives us access to the local Merkle tree state.
     // We search it for the commitment and return the path.
@@ -117,12 +117,12 @@ export function createStudentWitnesses(inputs: StudentWitnessInputs) {
             "Make sure the issuer has issued this credential on-chain.",
         );
       }
-      return path;
+      return [ctx.privateState, path];
     },
 
     // Unused witnesses — provide stubs so the runtime is happy
-    adminSecretKey: (_ctx: WitnessContext) => new Uint8Array(32),
-    issuerSecretKey: (_ctx: WitnessContext) => new Uint8Array(32),
+    adminSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    issuerSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
   };
 }
 
@@ -131,14 +131,14 @@ export function createStudentWitnesses(inputs: StudentWitnessInputs) {
  */
 export function createIssuerWitnesses(inputs: IssuerWitnessInputs) {
   return {
-    issuerSecretKey: (_ctx: WitnessContext) => inputs.issuerSecretKey,
+    issuerSecretKey: (ctx: WitnessContext) => [ctx.privateState, inputs.issuerSecretKey],
 
     // Stubs for unused witnesses
-    adminSecretKey: (_ctx: WitnessContext) => new Uint8Array(32),
-    studentSecretKey: (_ctx: WitnessContext) => new Uint8Array(32),
-    credentialPayload: (_ctx: WitnessContext) => new Uint8Array(32),
-    credentialNonce: (_ctx: WitnessContext) => new Uint8Array(32),
-    findCredentialPath: (_ctx: WitnessContext, _c: Uint8Array) => {
+    adminSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    studentSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    credentialPayload: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    credentialNonce: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    findCredentialPath: (ctx: WitnessContext, _c: Uint8Array) => {
       throw new Error("not used");
     },
   };
@@ -149,14 +149,14 @@ export function createIssuerWitnesses(inputs: IssuerWitnessInputs) {
  */
 export function createAdminWitnesses(inputs: AdminWitnessInputs) {
   return {
-    adminSecretKey: (_ctx: WitnessContext) => inputs.adminSecretKey,
+    adminSecretKey: (ctx: WitnessContext) => [ctx.privateState, inputs.adminSecretKey],
 
     // Stubs
-    issuerSecretKey: (_ctx: WitnessContext) => new Uint8Array(32),
-    studentSecretKey: (_ctx: WitnessContext) => new Uint8Array(32),
-    credentialPayload: (_ctx: WitnessContext) => new Uint8Array(32),
-    credentialNonce: (_ctx: WitnessContext) => new Uint8Array(32),
-    findCredentialPath: (_ctx: WitnessContext, _c: Uint8Array) => {
+    issuerSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    studentSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    credentialPayload: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    credentialNonce: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    findCredentialPath: (ctx: WitnessContext, _c: Uint8Array) => {
       throw new Error("not used");
     },
   };

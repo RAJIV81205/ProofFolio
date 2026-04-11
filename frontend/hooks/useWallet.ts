@@ -2,43 +2,52 @@
 
 import { useCallback, useState } from 'react';
 import '@midnight-ntwrk/dapp-connector-api';
-import type { Configuration, ConnectionStatus, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
+import type {
+  Configuration,
+  ConnectedAPI,
+  ConnectionStatus,
+  InitialAPI,
+} from '@midnight-ntwrk/dapp-connector-api';
 
-export type WalletServiceUriConfig = Record<string, unknown>;
+export type WalletServiceUriConfig = {
+  indexerUri: string;
+  indexerWsUri: string;
+  proofServerUri: string;
+  nodeUri: string;
+  networkId: string;
+};
 
 export interface WalletState {
   isConnected: boolean;
   walletAddress: string | null;
   serviceUriConfig: WalletServiceUriConfig | null;
+  connectedApi: ConnectedAPI | null;
   connecting: boolean;
   error: string | null;
 }
 
-type ConnectedApi = {
-  getShieldedAddresses: () => Promise<{ shieldedAddress: string }>;
-  getConfiguration: () => Promise<Configuration>;
-  getConnectionStatus: () => Promise<ConnectionStatus>;
-};
+function detectWallet(): Promise<InitialAPI | null> {
+  return new Promise((resolve) => {
+    const wallet = window.midnight?.['1am'];
+    if (wallet) { resolve(wallet); return; }
 
-function getInjectedWallets(): InitialAPI[] {
-  if (typeof window === 'undefined' || !window.midnight) return [];
-
-  const wallets = Object.values(window.midnight).filter(
-    (entry): entry is InitialAPI =>
-      typeof entry === 'object' &&
-      entry !== null &&
-      typeof entry.connect === 'function' &&
-      typeof entry.name === 'string',
-  );
-
-  // Prefer Lace when multiple wallets are present.
-  wallets.sort((a, b) => {
-    const aScore = /lace/i.test(a.name) ? 0 : 1;
-    const bScore = /lace/i.test(b.name) ? 0 : 1;
-    return aScore - bScore;
+    let attempts = 0;
+    const interval = setInterval(() => {
+      const w = window.midnight?.['1am'];
+      if (w) { clearInterval(interval); resolve(w); }
+      else if (++attempts > 50) { clearInterval(interval); resolve(null); }
+    }, 100);
   });
+}
 
-  return wallets;
+function mapRuntimeConfiguration(config: Configuration): WalletServiceUriConfig {
+  return {
+    indexerUri: config.indexerUri,
+    indexerWsUri: config.indexerWsUri,
+    proofServerUri: config.proverServerUri ?? process.env.NEXT_PUBLIC_MIDNIGHT_PROOF_SERVER ?? '',
+    nodeUri: config.substrateNodeUri,
+    networkId: config.networkId,
+  };
 }
 
 export function useWallet() {
@@ -46,6 +55,7 @@ export function useWallet() {
     isConnected: false,
     walletAddress: null,
     serviceUriConfig: null,
+    connectedApi: null,
     connecting: false,
     error: null,
   });
@@ -58,36 +68,27 @@ export function useWallet() {
         throw new Error('Wallet can only be connected in a browser.');
       }
 
-      const wallets = getInjectedWallets();
-      if (wallets.length === 0) {
+const wallet = await detectWallet();
+      if (!wallet) {
         throw new Error(
-          'No Midnight wallet detected in browser. Install/enable Lace Midnight extension and reload the page.',
+          'No 1AM wallet detected in browser. Install/enable the 1AM Midnight extension and reload the page.',
         );
       }
 
-      const selectedWallet = wallets[0];
-      const desiredNetwork = process.env.NEXT_PUBLIC_MIDNIGHT_NETWORK ?? 'preprod';
-      let connectedApi: ConnectedApi | null = null;
-      let lastConnectError: unknown = null;
-
-      for (const network of [desiredNetwork, 'testnet', 'preprod']) {
-        try {
-          connectedApi = (await selectedWallet.connect(network)) as ConnectedApi;
-          break;
-        } catch (error) {
-          lastConnectError = error;
-        }
-      }
-
-      if (!connectedApi) {
-        const details =
-          lastConnectError instanceof Error ? ` (${lastConnectError.message})` : '';
-        throw new Error(`Failed to connect wallet "${selectedWallet.name}"${details}`);
+      const desiredNetwork = process.env.NEXT_PUBLIC_MIDNIGHT_NETWORK ?? 'preview';
+      let connectedApi: ConnectedAPI;
+      try {
+        connectedApi = await wallet.connect(desiredNetwork);
+      } catch (error) {
+        const details = error instanceof Error ? ` (${error.message})` : '';
+        throw new Error(
+          `Failed to connect wallet "${wallet.name}" to network "${desiredNetwork}"${details}`,
+        );
       }
 
       const addresses = await connectedApi.getShieldedAddresses();
-      const serviceUriConfig = await connectedApi.getConfiguration();
-      const connectionStatus = await connectedApi.getConnectionStatus();
+      const configuration = await connectedApi.getConfiguration();
+      const connectionStatus = (await connectedApi.getConnectionStatus()) as ConnectionStatus;
 
       if (!connectionStatus || connectionStatus.status !== 'connected') {
         throw new Error('Wallet connected but status check failed.');
@@ -96,7 +97,8 @@ export function useWallet() {
       setState({
         isConnected: true,
         walletAddress: addresses.shieldedAddress,
-        serviceUriConfig: serviceUriConfig ?? null,
+        serviceUriConfig: mapRuntimeConfiguration(configuration),
+        connectedApi,
         connecting: false,
         error: null,
       });
@@ -114,6 +116,7 @@ export function useWallet() {
       isConnected: false,
       walletAddress: null,
       serviceUriConfig: null,
+      connectedApi: null,
       connecting: false,
       error: null,
     });

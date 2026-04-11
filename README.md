@@ -139,6 +139,59 @@ Employer verifies proof without seeing private data.
 
 ---
 
+# On-Chain Issuer Registration
+
+`issueCredential` only succeeds if the issuer public key is registered on-chain.
+
+Run a dry-run first:
+
+```bash
+npm run register-issuer:dry-run -- --issuer-secret "$(openssl rand -hex 32)"
+```
+
+Register issuer on-chain:
+
+```bash
+npm run register-issuer -- \
+  --issuer-secret "<64-hex>" \
+  --attestation-hash "$(openssl rand -hex 32)"
+```
+
+Requirements for non-dry-run:
+
+* `MIDNIGHT_OPERATOR_SEED`
+* `CREDZK_ADMIN_KEY`
+* `NEXT_PUBLIC_CONTRACT_ADDRESS` (or `deployment.json` present)
+
+---
+
+# Developer Integration Guide (Frontend)
+
+Use the built-in guide page to run end-to-end checks and transaction tests through the 1AM wallet:
+
+* URL: `/developer-integration-guide`
+* Features:
+  * wallet detection/connect validation
+  * address/balance/config checks
+  * contract ledger read check
+  * full transaction suite: `registerIssuer`, `issueCredential`, `presentCredential`, `revokeCredential`
+  * optional cleanup: `deregisterIssuer`
+  * transaction hash verification and step-by-step pass/fail output
+
+Required inputs on the guide page:
+
+* `ADMIN_SECRET_KEY` (contract admin witness key, 64 hex chars)
+* `ISSUER_SECRET_KEY` (64 hex chars)
+* `STUDENT_SECRET_KEY` (64 hex chars; can be generated on page)
+
+Before opening the page:
+
+1. Start frontend: `cd frontend && npm run dev`
+2. Ensure `NEXT_PUBLIC_CONTRACT_ADDRESS` and network URLs are set in `frontend/.env.local`
+3. Connect 1AM wallet extension in browser
+
+---
+
 # 7. Main Features
 
 ## Private credential issuance

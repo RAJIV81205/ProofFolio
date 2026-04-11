@@ -109,6 +109,7 @@ export default function HomePage() {
           <div className="nav-r">
             <a href="#how"      className="nl">How it works</a>
             <a href="#portals"  className="nl">Portals</a>
+            <Link href="/developer-integration-guide" className="nl">Dev Guide</Link>
             <a href="https://docs.midnight.network" className="nl" target="_blank" rel="noreferrer">Docs</a>
             <Link href="/university" className="ncta">Launch app</Link>
           </div>

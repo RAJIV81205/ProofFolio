@@ -63,7 +63,10 @@ export async function DELETE(req: Request) {
 
     const issuers = await removeAllowedIssuer(walletAddress, session.username);
     return NextResponse.json({ ok: true, issuers });
-  } catch {
-    return NextResponse.json({ error: 'Failed to remove issuer.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to remove issuer.' },
+      { status: 400 },
+    );
   }
 }

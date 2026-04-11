@@ -9,7 +9,12 @@ const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? '';
 
 export default function EmployerPage() {
   const wallet = useWallet();
-  const contract = useContract(CONTRACT_ADDRESS, wallet.serviceUriConfig);
+  const contract = useContract(
+    CONTRACT_ADDRESS,
+    wallet.serviceUriConfig,
+    wallet.connectedApi,
+    wallet.walletAddress,
+  );
   const { getLedgerState, verifyPresentationByTxHash } = contract;
 
   const [ledgerState, setLedgerState] = useState<{
@@ -50,7 +55,7 @@ export default function EmployerPage() {
       }
       setVerificationResult({
         ok: true,
-        message: `Valid proof found. Commitment ${found.commitmentHex.slice(0, 16)}... verified at ${new Date(found.createdAt).toLocaleString()}`,
+        message: `Valid proof transaction ${found.txHash.slice(0, 16)}... finalized at ${new Date(found.createdAt).toLocaleString()}.`,
       });
     } catch (err) {
       setVerificationResult({

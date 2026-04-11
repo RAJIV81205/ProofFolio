@@ -193,7 +193,7 @@ export async function createWallet(seedHex) {
   };
 }
 
-export async function waitForWalletSync(walletCtx, timeoutMs = 180_000) {
+export async function waitForWalletSync(walletCtx, timeoutMs = 300_000) {
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => reject(new Error("Wallet sync timed out.")), timeoutMs);
   });
@@ -251,8 +251,15 @@ export function signTransactionIntents(tx, signFn, proofMarker) {
 }
 
 export async function createProviders(walletCtx, privateStateStoreName) {
+  const syncTimeoutMs = Number(process.env.MIDNIGHT_OPERATOR_SYNC_TIMEOUT_MS ?? 300_000);
   const state = await Rx.firstValueFrom(
-    walletCtx.wallet.state().pipe(Rx.filter((s) => s.isSynced)),
+    walletCtx.wallet.state().pipe(
+      Rx.filter((s) => s.isSynced),
+      Rx.timeout({
+        first: syncTimeoutMs,
+        with: () => Rx.throwError(() => new Error(`Wallet state stream not synced within ${syncTimeoutMs}ms.`)),
+      }),
+    ),
   );
 
   const walletProvider = {

@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@/hooks/useWallet';
 import { useContract } from '@/hooks/useContract';
 import { DegreeType } from '@/lib/witness';
-import { mergeTestingSession, readTestingSession } from '@/lib/testingSession';
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? '';
 
@@ -18,125 +17,150 @@ const degreeOptions = [
   { value: DegreeType.MSc, label: 'M.Sc' },
 ];
 
+function parseHex32(value: string): Uint8Array {
+  const normalized = value.trim().toLowerCase().replace(/^0x/, '');
+  if (!/^[0-9a-f]{64}$/.test(normalized)) {
+    throw new Error('Issuer secret key must be 64 hex chars (32 bytes).');
+  }
+
+  const bytes = new Uint8Array(32);
+  for (let i = 0; i < 32; i += 1) {
+    bytes[i] = Number.parseInt(normalized.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
 export default function UniversityClient() {
   const wallet = useWallet();
-  const contract = useContract(CONTRACT_ADDRESS, wallet.serviceUriConfig);
-  const initialSession = readTestingSession();
-
-  const [studentId, setStudentId] = useState(initialSession.studentId ?? '');
-  const [degreeType, setDegreeType] = useState(
-    typeof initialSession.degreeType === 'number' ? initialSession.degreeType : DegreeType.BTech,
+  const contract = useContract(
+    CONTRACT_ADDRESS,
+    wallet.serviceUriConfig,
+    wallet.connectedApi,
+    wallet.walletAddress,
   );
-  const [graduationYear, setGraduationYear] = useState(initialSession.graduationYear ?? 2024);
-  const [institutionId, setInstitutionId] = useState(initialSession.institutionId ?? 1001);
+  const { deriveIssuerPublicKeyHex, isAuthorizedIssuer } = contract;
+  const currentYear = new Date().getFullYear();
+
+  const [studentId, setStudentId] = useState('');
+  const [degreeType, setDegreeType] = useState(DegreeType.BTech);
+  const [graduationYear, setGraduationYear] = useState(currentYear);
+  const [institutionId, setInstitutionId] = useState(1);
 
   const [issuerAuthorized, setIssuerAuthorized] = useState(false);
   const [issuerCheckLoading, setIssuerCheckLoading] = useState(false);
   const [issuerStatusMessage, setIssuerStatusMessage] = useState<string | null>(null);
-  const [applicationStatus, setApplicationStatus] = useState<
-    'pending' | 'approved' | 'rejected' | 'none'
-  >('none');
+  const [issuerSecretKeyHex, setIssuerSecretKeyHex] = useState('');
+  const [issuerPublicKeyHex, setIssuerPublicKeyHex] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [result, setResult] = useState<{
     txHash: string;
-    commitmentHex: string;
     nonceHex: string;
+    degreeType: number;
+    graduationYear: number;
+    institutionId: number;
   } | null>(null);
 
-  const issuerSecretKey = useMemo(() => new Uint8Array(32).fill(1), []);
-
   useEffect(() => {
-    const checkIssuer = async () => {
-      if (!wallet.isConnected || !wallet.walletAddress) {
+    let cancelled = false;
+
+    const checkIssuerOnChain = async () => {
+      if (!wallet.isConnected) {
         setIssuerAuthorized(false);
-        setIssuerStatusMessage(null);
+        setIssuerPublicKeyHex(null);
+        setIssuerStatusMessage('Connect wallet to run on-chain issuer checks.');
+        return;
+      }
+
+      const normalizedKey = issuerSecretKeyHex.trim();
+      if (!normalizedKey) {
+        setIssuerAuthorized(false);
+        setIssuerPublicKeyHex(null);
+        setIssuerStatusMessage('Enter issuer secret key to verify authorization on Midnight.');
         return;
       }
 
       setIssuerCheckLoading(true);
-      setIssuerStatusMessage(null);
+      setIssuerStatusMessage('Verifying issuer authorization on Midnight...');
+
       try {
-        const res = await fetch(`/api/university/applications/status?wallet=${encodeURIComponent(wallet.walletAddress)}`, {
-          method: 'GET',
-          cache: 'no-store',
-        });
-        const payload = (await res.json()) as {
-          authorized?: boolean;
-          error?: string;
-          application?: { status?: 'pending' | 'approved' | 'rejected' } | null;
-        };
+        const derivedIssuerPublicKeyHex = deriveIssuerPublicKeyHex(normalizedKey);
+        const authorized = await isAuthorizedIssuer(derivedIssuerPublicKeyHex);
+        if (cancelled) return;
 
-        if (!res.ok) {
-          throw new Error(payload.error ?? 'Unable to validate issuer wallet');
-        }
-
-        setIssuerAuthorized(Boolean(payload.authorized));
-        const latestStatus = payload.application?.status ?? 'none';
-        setApplicationStatus(latestStatus);
-
-        if (payload.authorized) {
-          setIssuerStatusMessage('Wallet is approved and can issue credentials.');
-        } else if (latestStatus === 'pending') {
-          setIssuerStatusMessage('Application is pending admin review. Issuance is blocked until approval.');
-        } else if (latestStatus === 'rejected') {
-          setIssuerStatusMessage('Application was rejected. Submit a new application with updated details.');
-        } else {
-          setIssuerStatusMessage(
-            'No approved application found for this wallet. Submit the university application first.',
-          );
-        }
-      } catch (err) {
+        setIssuerPublicKeyHex(derivedIssuerPublicKeyHex);
+        setIssuerAuthorized(authorized);
+        setIssuerStatusMessage(
+          authorized
+            ? 'Issuer key is authorized on Midnight and can issue credentials.'
+            : 'Issuer key is not authorized on Midnight. Admin must call registerIssuer first.',
+        );
+      } catch (error) {
+        if (cancelled) return;
         setIssuerAuthorized(false);
-        setApplicationStatus('none');
-        setIssuerStatusMessage(err instanceof Error ? err.message : 'Unable to validate wallet authorization.');
+        setIssuerPublicKeyHex(null);
+        setIssuerStatusMessage(
+          error instanceof Error ? error.message : 'Unable to verify issuer authorization on-chain.',
+        );
       } finally {
-        setIssuerCheckLoading(false);
+        if (!cancelled) {
+          setIssuerCheckLoading(false);
+        }
       }
     };
 
-    checkIssuer();
-  }, [wallet.isConnected, wallet.walletAddress]);
+    checkIssuerOnChain();
+    return () => {
+      cancelled = true;
+    };
+  }, [deriveIssuerPublicKeyHex, isAuthorizedIssuer, issuerSecretKeyHex, wallet.isConnected]);
 
   const issue = async () => {
     if (!wallet.walletAddress || !issuerAuthorized) return;
 
-    const res = await contract.issueCredential(issuerSecretKey, {
-      degreeType,
-      graduationYear,
-      institutionId,
-    });
+    setActionError(null);
+    try {
+      const issuerSecretKey = parseHex32(issuerSecretKeyHex);
+      const derivedIssuerPk = deriveIssuerPublicKeyHex(issuerSecretKey);
+      const stillAuthorized = await isAuthorizedIssuer(derivedIssuerPk);
 
-    setResult({
-      txHash: res.txHash,
-      commitmentHex: res.commitmentHex,
-      nonceHex: res.nonceHex,
-    });
+      if (!stillAuthorized) {
+        throw new Error('Issuer authorization is not active on Midnight. Registration is required before issuance.');
+      }
 
-    mergeTestingSession({
-      studentId,
-      degreeType,
-      graduationYear,
-      institutionId,
-      nonceHex: res.nonceHex,
-      commitmentHex: res.commitmentHex,
-      issueTxHash: res.txHash,
-    });
+      const res = await contract.issueCredential(issuerSecretKey, {
+        degreeType,
+        graduationYear,
+        institutionId,
+      });
 
-    await fetch('/api/admin/audit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'issue_credential',
-        walletAddress: wallet.walletAddress,
-        metadata: {
-          degreeType,
-          graduationYear,
-          institutionId,
-          txHash: res.txHash,
-          commitmentHex: res.commitmentHex,
-        },
-      }),
-    });
+      setResult({
+        txHash: res.txHash,
+        nonceHex: res.nonceHex,
+        degreeType,
+        graduationYear,
+        institutionId,
+      });
+
+      await fetch('/api/admin/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'issue_credential',
+          walletAddress: wallet.walletAddress,
+          metadata: {
+            studentId,
+            issuerPublicKeyHex: derivedIssuerPk,
+            degreeType,
+            graduationYear,
+            institutionId,
+            txHash: res.txHash,
+          },
+        }),
+      });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Credential issuance failed.');
+    }
   };
 
   return (
@@ -146,7 +170,7 @@ export default function UniversityClient() {
           <p className="pill">University Issuer Portal</p>
           <h1 className="mt-3 text-3xl font-bold text-slate-900">Private Credential Issuance</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Login with wallet. Issuing is enabled only after admin approves your application.
+            Login with wallet. Issuing is enabled only when the issuer key is authorized on Midnight.
           </p>
         </div>
         <div className="flex gap-2">
@@ -163,7 +187,7 @@ export default function UniversityClient() {
         {!wallet.isConnected ? (
           <div>
             <p className="text-slate-700">
-              Connect your university wallet to login. If your wallet is not active yet, submit an application.
+              Connect your university wallet and verify issuer authorization on Midnight.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button onClick={wallet.connect} disabled={wallet.connecting} className="btn-primary">
@@ -183,18 +207,15 @@ export default function UniversityClient() {
               {issuerCheckLoading ? (
                 <p className="mt-2 text-xs text-slate-600">Checking issuer allowlist...</p>
               ) : issuerAuthorized ? (
-                <p className="mt-2 text-xs font-semibold text-emerald-700">Wallet is admin-approved for issuance.</p>
+                <div className="mt-2">
+                  <p className="text-xs font-semibold text-emerald-700">Issuer key is authorized on Midnight.</p>
+                  {issuerPublicKeyHex && (
+                    <p className="mt-1 break-all text-[11px] text-emerald-800">Issuer PK: {issuerPublicKeyHex}</p>
+                  )}
+                </div>
               ) : (
                 <div className="mt-2">
-                  <p className="text-xs font-semibold text-rose-700">{issuerStatusMessage ?? 'Wallet not authorized.'}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Link href="/university/apply" className="btn-ghost border-amber-200 text-xs text-amber-800">
-                      Submit / Update Application
-                    </Link>
-                    {applicationStatus !== 'none' && (
-                      <span className="pill text-[11px]">Current status: {applicationStatus}</span>
-                    )}
-                  </div>
+                  <p className="text-xs font-semibold text-rose-700">{issuerStatusMessage ?? 'Issuer not authorized.'}</p>
                 </div>
               )}
             </div>
@@ -249,9 +270,28 @@ export default function UniversityClient() {
               </label>
             </div>
 
+            <label className="field-label">
+              Issuer Secret Key (hex, 32 bytes)
+              <input
+                type="password"
+                value={issuerSecretKeyHex}
+                onChange={(e) => setIssuerSecretKeyHex(e.target.value)}
+                className="field-control"
+                placeholder="64 hex chars (no spaces)"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+
             <button
               onClick={issue}
-              disabled={contract.loading || !studentId || !CONTRACT_ADDRESS || !issuerAuthorized}
+              disabled={
+                contract.loading ||
+                !studentId ||
+                !CONTRACT_ADDRESS ||
+                !issuerAuthorized ||
+                issuerSecretKeyHex.trim().length === 0
+              }
               className="btn-primary"
             >
               {contract.loading ? 'Issuing...' : 'Issue Credential'}
@@ -264,19 +304,33 @@ export default function UniversityClient() {
             )}
 
             {contract.error && <p className="text-sm text-rose-700">Error: {contract.error}</p>}
+            {actionError && <p className="text-sm text-rose-700">Error: {actionError}</p>}
 
             {result && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
                 <p className="font-semibold">Credential issued successfully</p>
                 <p className="mt-2 break-all">
-                  <span className="font-semibold">Commitment:</span> <code>{result.commitmentHex}</code>
-                </p>
-                <p className="mt-1 break-all">
                   <span className="font-semibold">Nonce:</span> <code>{result.nonceHex}</code>
                 </p>
                 <p className="mt-1 break-all">
                   <span className="font-semibold">Issue TX:</span> <code>{result.txHash}</code>
                 </p>
+                <p className="mt-1">
+                  <span className="font-semibold">Degree Type:</span> {result.degreeType}
+                </p>
+                <p className="mt-1">
+                  <span className="font-semibold">Graduation Year:</span> {result.graduationYear}
+                </p>
+                <p className="mt-1">
+                  <span className="font-semibold">Institution ID:</span> {result.institutionId}
+                </p>
+                <p className="mt-2 text-xs font-medium">Copy this package to Student Portal to avoid mismatched inputs:</p>
+                <pre className="mt-1 overflow-auto rounded bg-emerald-100 p-2 text-[11px]">{JSON.stringify({
+                  degreeType: result.degreeType,
+                  graduationYear: result.graduationYear,
+                  institutionId: result.institutionId,
+                  nonceHex: result.nonceHex,
+                })}</pre>
               </div>
             )}
           </div>
