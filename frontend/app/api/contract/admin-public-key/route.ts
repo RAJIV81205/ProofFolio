@@ -55,6 +55,7 @@ function deriveAdminPublicKeyHex(adminSecretKeyHex: string): string {
     studentSecretKey: (ctx: WitnessContext) => [ctx.privateState, zero],
     credentialPayload: (ctx: WitnessContext) => [ctx.privateState, zero],
     credentialNonce: (ctx: WitnessContext) => [ctx.privateState, zero],
+    credentialIssuerPk: (ctx: WitnessContext) => [ctx.privateState, zero],
     findCredentialPath: (ctx: WitnessContext) => [ctx.privateState, { leaf: zero, path: [] }],
   });
 

@@ -13,6 +13,7 @@ interface ApplicationForm {
   city: string;
   representativeName: string;
   walletAddress: string;
+  issuerPublicKeyHex: string;
   supportingNotes: string;
 }
 
@@ -25,6 +26,7 @@ const emptyForm: ApplicationForm = {
   city: '',
   representativeName: '',
   walletAddress: '',
+  issuerPublicKeyHex: '',
   supportingNotes: '',
 };
 
@@ -241,6 +243,23 @@ export default function UniversityApplyPage() {
               readOnly
               disabled
               placeholder="Connect wallet to auto-fill"
+              required
+            />
+          </label>
+
+          <label className="field-label md:col-span-2">
+            Issuer Public Key (hex, 32 bytes)
+            <input
+              className="field-control"
+              value={form.issuerPublicKeyHex}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  issuerPublicKeyHex: e.target.value.trim().toLowerCase().replace(/^0x/, ''),
+                }))
+              }
+              placeholder="64-char hex derived from issuer key used for issuing credentials"
+              pattern="[0-9a-fA-F]{64}"
               required
             />
           </label>

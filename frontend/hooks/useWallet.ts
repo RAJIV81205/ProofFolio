@@ -44,7 +44,7 @@ function mapRuntimeConfiguration(config: Configuration): WalletServiceUriConfig 
   return {
     indexerUri: config.indexerUri,
     indexerWsUri: config.indexerWsUri,
-    proofServerUri: config.proverServerUri ?? process.env.NEXT_PUBLIC_MIDNIGHT_PROOF_SERVER ?? '',
+    proofServerUri: config.proverServerUri ?? '',
     nodeUri: config.substrateNodeUri,
     networkId: config.networkId,
   };

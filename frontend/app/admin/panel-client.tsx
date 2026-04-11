@@ -2,6 +2,38 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useContract } from '@/hooks/useContract';
+import { useWallet } from '@/hooks/useWallet';
+
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? '';
+
+function normalizeHex(value: string): string {
+  return value.trim().toLowerCase().replace(/^0x/, '');
+}
+
+function isHex32(value: string): boolean {
+  return /^[0-9a-f]{64}$/.test(normalizeHex(value));
+}
+
+function hexToBytes32(value: string, label: string): Uint8Array {
+  const normalized = normalizeHex(value);
+  if (!isHex32(normalized)) {
+    throw new Error(`${label} must be exactly 64 hex chars.`);
+  }
+
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 32; i += 1) {
+    out[i] = Number.parseInt(normalized.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+function randomHex32(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 interface AuditLog {
   id: string;
@@ -11,6 +43,9 @@ interface AuditLog {
   createdAt: string;
   metadata?: {
     txHash?: string;
+    onChainTxHash?: string;
+    issuerPublicKeyHex?: string;
+    attestationHashHex?: string;
     degreeType?: number;
     graduationYear?: number;
     institutionId?: number;
@@ -30,6 +65,7 @@ interface UniversityApplication {
   city: string;
   representativeName: string;
   walletAddress: string;
+  issuerPublicKeyHex: string;
   supportingNotes?: string;
   status: 'pending' | 'approved' | 'rejected';
   reviewedBy: string | null;
@@ -40,6 +76,14 @@ interface UniversityApplication {
 }
 
 export default function AdminPanelClient({ username }: { username: string }) {
+  const wallet = useWallet();
+  const contract = useContract(
+    CONTRACT_ADDRESS,
+    wallet.serviceUriConfig,
+    wallet.connectedApi,
+    wallet.walletAddress,
+  );
+
   const [walletAddress, setWalletAddress] = useState('');
   const [issuers, setIssuers] = useState<string[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -49,7 +93,10 @@ export default function AdminPanelClient({ username }: { username: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adminSecretKeyHex, setAdminSecretKeyHex] = useState('');
+  const [txStatus, setTxStatus] = useState<Record<string, string>>({});
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [reviewIssuerKeys, setReviewIssuerKeys] = useState<Record<string, string>>({});
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
 
   const activeIssuerCount = useMemo(() => issuers.length, [issuers]);
@@ -82,8 +129,18 @@ export default function AdminPanelClient({ username }: { username: string }) {
 
       setIssuers(issuerPayload.issuers ?? []);
       setLogs(issuerPayload.logs ?? []);
-      setPendingApplications(applicationsPayload.pending ?? []);
+      const pending = applicationsPayload.pending ?? [];
+      setPendingApplications(pending);
       setReviewedApplications(applicationsPayload.reviewed ?? []);
+      setReviewIssuerKeys((prev) => {
+        const next = { ...prev };
+        for (const app of pending) {
+          if (next[app.id] === undefined) {
+            next[app.id] = app.issuerPublicKeyHex ?? '';
+          }
+        }
+        return next;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load admin data.');
     } finally {
@@ -144,6 +201,52 @@ export default function AdminPanelClient({ username }: { username: string }) {
     setError(null);
 
     try {
+      const issuerPublicKeyHex = normalizeHex(reviewIssuerKeys[applicationId] ?? '');
+      let attestationHashHex = '';
+      let onChainTxHash = '';
+      let onChainAlreadyAuthorized = false;
+
+      if (decision === 'approved') {
+        if (!wallet.isConnected || !wallet.walletAddress) {
+          throw new Error('Connect your 1AM wallet before approving and registering issuer on-chain.');
+        }
+
+        const adminSecretKey = normalizeHex(adminSecretKeyHex);
+        if (!isHex32(adminSecretKey)) {
+          throw new Error('Admin secret key must be exactly 64 hex chars.');
+        }
+
+        if (!isHex32(issuerPublicKeyHex)) {
+          throw new Error('Issuer public key must be exactly 64 hex chars.');
+        }
+
+        setTxStatus((prev) => ({ ...prev, [applicationId]: 'Checking issuer authorization on-chain...' }));
+        onChainAlreadyAuthorized = await contract.isAuthorizedIssuer(issuerPublicKeyHex);
+        attestationHashHex = randomHex32();
+
+        if (!onChainAlreadyAuthorized) {
+          setTxStatus((prev) => ({
+            ...prev,
+            [applicationId]: 'Open 1AM wallet and sign registerIssuer transaction...',
+          }));
+          onChainTxHash = await contract.registerIssuer(
+            hexToBytes32(adminSecretKey, 'Admin secret key'),
+            hexToBytes32(issuerPublicKeyHex, 'Issuer public key'),
+            hexToBytes32(attestationHashHex, 'Attestation hash'),
+          );
+
+          setTxStatus((prev) => ({
+            ...prev,
+            [applicationId]: `registerIssuer submitted: ${onChainTxHash.slice(0, 16)}...`,
+          }));
+        } else {
+          setTxStatus((prev) => ({
+            ...prev,
+            [applicationId]: 'Issuer already authorized on-chain. Skipping registerIssuer transaction.',
+          }));
+        }
+      }
+
       const res = await fetch('/api/admin/applications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -151,14 +254,29 @@ export default function AdminPanelClient({ username }: { username: string }) {
           applicationId,
           decision,
           reviewNote: reviewNotes[applicationId] ?? '',
+          issuerPublicKeyHex,
+          attestationHashHex,
+          onChainTxHash,
+          onChainAlreadyAuthorized,
         }),
       });
 
       const payload = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(payload.error ?? 'Unable to review application.');
+      setTxStatus((prev) => ({
+        ...prev,
+        [applicationId]:
+          decision === 'approved'
+            ? 'Approved and synced to Mongo after on-chain registration step.'
+            : 'Application rejected.',
+      }));
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to review application.');
+      setTxStatus((prev) => ({
+        ...prev,
+        [applicationId]: err instanceof Error ? err.message : 'Unable to review application.',
+      }));
     } finally {
       setActiveReviewId(null);
     }
@@ -194,6 +312,43 @@ export default function AdminPanelClient({ username }: { username: string }) {
         <MetricCard label="Approved Wallets" value={activeIssuerCount.toString()} />
         <MetricCard label="Reviewed Applications" value={reviewedApplications.length.toString()} />
         <MetricCard label="Recent Security Logs" value={logs.length.toString()} />
+      </section>
+
+      <section className="mt-5 glass-card p-6">
+        <h2 className="text-xl font-semibold">On-Chain Approval Signer (1AM Wallet)</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Approval now follows transaction-first flow: sign registerIssuer in wallet, then Mongo is updated.
+        </p>
+
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white/80 p-3 text-sm">
+          <p className="text-slate-600">Wallet status</p>
+          <p className="mt-1 break-all font-medium text-slate-900">
+            {wallet.isConnected ? wallet.walletAddress : 'Not connected'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!wallet.isConnected ? (
+              <button onClick={wallet.connect} disabled={wallet.connecting} className="btn-primary">
+                {wallet.connecting ? 'Connecting...' : 'Connect 1AM Wallet'}
+              </button>
+            ) : (
+              <button onClick={wallet.disconnect} className="btn-ghost">
+                Disconnect Wallet
+              </button>
+            )}
+          </div>
+          {wallet.error && <p className="mt-2 text-xs text-rose-700">{wallet.error}</p>}
+          {contract.error && <p className="mt-2 text-xs text-rose-700">{contract.error}</p>}
+        </div>
+
+        <label className="field-label mt-4">
+          Admin Secret Key (required to build registerIssuer witness)
+          <input
+            value={adminSecretKeyHex}
+            onChange={(e) => setAdminSecretKeyHex(normalizeHex(e.target.value))}
+            className="field-control mt-2 font-mono"
+            placeholder="64 hex chars"
+          />
+        </label>
       </section>
 
       {error && (
@@ -241,6 +396,9 @@ export default function AdminPanelClient({ username }: { username: string }) {
                     <p className="break-all">
                       <span className="font-semibold">Wallet:</span> {app.walletAddress}
                     </p>
+                    <p className="break-all md:col-span-2">
+                      <span className="font-semibold">Issuer Public Key:</span> {app.issuerPublicKeyHex || 'Not provided'}
+                    </p>
                   </div>
 
                   {app.supportingNotes && (
@@ -256,13 +414,25 @@ export default function AdminPanelClient({ username }: { username: string }) {
                     placeholder="Optional review note (reason, conditions, etc.)"
                   />
 
+                  <input
+                    value={reviewIssuerKeys[app.id] ?? ''}
+                    onChange={(e) =>
+                      setReviewIssuerKeys((prev) => ({
+                        ...prev,
+                        [app.id]: e.target.value.trim().toLowerCase().replace(/^0x/, ''),
+                      }))
+                    }
+                    className="field-control mt-3 text-sm font-mono"
+                    placeholder="Issuer Public Key (64 hex chars, required for approve)"
+                  />
+
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       className="btn-primary"
                       onClick={() => reviewApplication(app.id, 'approved')}
-                      disabled={activeReviewId === app.id}
+                      disabled={activeReviewId === app.id || contract.loading}
                     >
-                      Approve
+                      {activeReviewId === app.id ? 'Processing...' : 'Approve'}
                     </button>
                     <button
                       className="btn-ghost border-rose-200 text-rose-700"
@@ -272,6 +442,10 @@ export default function AdminPanelClient({ username }: { username: string }) {
                       Reject
                     </button>
                   </div>
+
+                  {txStatus[app.id] && (
+                    <p className="mt-2 text-xs text-slate-600">{txStatus[app.id]}</p>
+                  )}
                 </div>
               ))
             )}
@@ -296,7 +470,7 @@ export default function AdminPanelClient({ username }: { username: string }) {
             </button>
           </form>
 
-          <div className="mt-4 max-h-[380px] space-y-2 overflow-y-auto pr-1">
+          <div className="mt-4 max-h-95 space-y-2 overflow-y-auto pr-1">
             {issuers.length === 0 ? (
               <p className="text-sm text-slate-600">No approved issuer wallets yet.</p>
             ) : (
@@ -320,7 +494,7 @@ export default function AdminPanelClient({ username }: { username: string }) {
       <section className="mt-5 grid gap-4 lg:grid-cols-2">
         <article className="glass-card p-6">
           <h2 className="text-xl font-semibold">Recent Decisions</h2>
-          <div className="mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+          <div className="mt-3 max-h-70 space-y-2 overflow-y-auto pr-1">
             {reviewedApplications.length === 0 ? (
               <p className="text-sm text-slate-600">No reviewed applications yet.</p>
             ) : (
@@ -338,7 +512,7 @@ export default function AdminPanelClient({ username }: { username: string }) {
 
         <article className="glass-card p-6">
           <h2 className="text-xl font-semibold">Security Audit Trail</h2>
-          <div className="mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+          <div className="mt-3 max-h-70 space-y-2 overflow-y-auto pr-1">
             {logs.length === 0 ? (
               <p className="text-sm text-slate-600">No logs recorded yet.</p>
             ) : (

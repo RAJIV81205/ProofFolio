@@ -1,163 +1,246 @@
 /**
- * witness.ts
+ * witness.ts — CredZK v2  (FIXED)
  *
- * Supplies private (off-chain) data to Compact circuits.
- * Nothing in this file ever touches the network — it all stays local.
+ * KEY FIX: Every witness function MUST return [privateState, value].
+ * The Midnight compact-runtime requires this tuple shape.
+ * Returning just `value` (a plain Uint8Array) causes the proof server
+ * to receive malformed circuit inputs → "Proof server check failed (400): bad input".
  *
- * Think of this as the "private data provider" that sits between
- * your local encrypted store and the ZK circuit.
+ * Docs reference:
+ *   "Each witness function returns a tuple of the updated private state
+ *    and the witness value." — Midnight docs, Use the Compact JS Implementation
  */
 
-import type { WitnessContext } from "@midnight-ntwrk/compact-runtime";
+import type { WitnessContext } from '@midnight-ntwrk/compact-runtime';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Types
+// Private state shape — carried through every witness call
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type CredZKPrivateState = {
+  readonly studentSecretKey:   Uint8Array;
+  readonly issuerSecretKey:    Uint8Array;
+  readonly adminSecretKey:     Uint8Array;
+  readonly credentialPayload:  Uint8Array;
+  readonly credentialNonce:    Uint8Array;
+  readonly credentialIssuerPk: Uint8Array;
+};
+
+export const createEmptyPrivateState = (): CredZKPrivateState => ({
+  studentSecretKey:   new Uint8Array(32),
+  issuerSecretKey:    new Uint8Array(32),
+  adminSecretKey:     new Uint8Array(32),
+  credentialPayload:  new Uint8Array(32),
+  credentialNonce:    new Uint8Array(32),
+  credentialIssuerPk: new Uint8Array(32),
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Payload layout  (32 bytes, big-endian)
+// [0]      degreeType        uint8
+// [1-2]    graduationYear    uint16
+// [3-6]    institutionId     uint32
+// [7-10]   issuedAt          uint32  (unix seconds, 0 = not set)
+// [11-14]  validUntil        uint32  (unix seconds, 0 = no expiry)
+// [15-31]  zero padding
 // ─────────────────────────────────────────────────────────────────────────────
 
 export enum DegreeType {
-  BTech = 0,
-  MTech = 1,
-  PhD = 2,
-  MBA = 3,
+  BTech   = 0,
+  MTech   = 1,
+  PhD     = 2,
+  MBA     = 3,
   Diploma = 4,
-  BCA = 5,
-  MCA = 6,
-  BSc = 7,
-  MSc = 8,
-  Other = 255,
+  BCA     = 5,
+  MCA     = 6,
+  BSc     = 7,
+  MSc     = 8,
+  BEd     = 9,
+  LLB     = 10,
+  MBBS    = 11,
+  Other   = 255,
 }
+
+export const DEGREE_LABELS: Record<number, string> = {
+  [DegreeType.BTech]:   'B.Tech',
+  [DegreeType.MTech]:   'M.Tech',
+  [DegreeType.PhD]:     'Ph.D',
+  [DegreeType.MBA]:     'MBA',
+  [DegreeType.Diploma]: 'Diploma',
+  [DegreeType.BCA]:     'BCA',
+  [DegreeType.MCA]:     'MCA',
+  [DegreeType.BSc]:     'B.Sc',
+  [DegreeType.MSc]:     'M.Sc',
+  [DegreeType.BEd]:     'B.Ed',
+  [DegreeType.LLB]:     'LLB',
+  [DegreeType.MBBS]:    'MBBS',
+  [DegreeType.Other]:   'Other',
+};
 
 export interface CredentialData {
-  degreeType: DegreeType;
-  graduationYear: number; // e.g. 2022
-  institutionId: number; // numeric ID mapped to institution name
+  degreeType:     DegreeType;
+  graduationYear: number;
+  institutionId:  number;
+  issuedAt:       number;   // unix seconds
+  validUntil:     number;   // unix seconds, 0 = no expiry
 }
 
-/**
- * Everything needed by circuits that act on behalf of the STUDENT
- */
-export interface StudentWitnessInputs {
-  studentSecretKey: Uint8Array; // 32 bytes — keep this secret!
-  credentialPayload: Uint8Array; // packed Bytes<32> — see packCredential()
-  credentialNonce: Uint8Array; // 32 random bytes — generated at issuance
+export interface DisclosureSelection {
+  degree:        string | null;
+  year:          string | null;
+  institutionId: string | null;
 }
-
-/**
- * Everything needed by circuits that act on behalf of the ISSUER
- */
-export interface IssuerWitnessInputs {
-  issuerSecretKey: Uint8Array;
-}
-
-/**
- * Everything needed by circuits that act on behalf of the ADMIN
- */
-export interface AdminWitnessInputs {
-  adminSecretKey: Uint8Array;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Credential payload packing
-// Layout: [degreeType(1)] [year_hi(1)] [year_lo(1)] [institutionId(4)] [pad(25)]
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function packCredential(data: CredentialData): Uint8Array {
   const buf = new Uint8Array(32);
-  buf[0] = data.degreeType & 0xff;
-  buf[1] = (data.graduationYear >> 8) & 0xff;
-  buf[2] = data.graduationYear & 0xff;
-  buf[3] = (data.institutionId >> 24) & 0xff;
-  buf[4] = (data.institutionId >> 16) & 0xff;
-  buf[5] = (data.institutionId >> 8) & 0xff;
-  buf[6] = data.institutionId & 0xff;
-  // bytes 7–31 are zero padding
+  buf[0]  = data.degreeType & 0xff;
+  buf[1]  = (data.graduationYear >> 8) & 0xff;
+  buf[2]  = data.graduationYear & 0xff;
+  buf[3]  = (data.institutionId >> 24) & 0xff;
+  buf[4]  = (data.institutionId >> 16) & 0xff;
+  buf[5]  = (data.institutionId >> 8)  & 0xff;
+  buf[6]  = data.institutionId & 0xff;
+  buf[7]  = (data.issuedAt >> 24) & 0xff;
+  buf[8]  = (data.issuedAt >> 16) & 0xff;
+  buf[9]  = (data.issuedAt >> 8)  & 0xff;
+  buf[10] = data.issuedAt & 0xff;
+  buf[11] = (data.validUntil >> 24) & 0xff;
+  buf[12] = (data.validUntil >> 16) & 0xff;
+  buf[13] = (data.validUntil >> 8)  & 0xff;
+  buf[14] = data.validUntil & 0xff;
   return buf;
 }
 
 export function unpackCredential(buf: Uint8Array): CredentialData {
   return {
-    degreeType: buf[0] as DegreeType,
+    degreeType:     buf[0] as DegreeType,
     graduationYear: (buf[1] << 8) | buf[2],
-    institutionId: (buf[3] << 24) | (buf[4] << 16) | (buf[5] << 8) | buf[6],
+    institutionId:  ((buf[3] << 24) | (buf[4] << 16) | (buf[5] << 8) | buf[6]) >>> 0,
+    issuedAt:       ((buf[7] << 24) | (buf[8] << 16) | (buf[9] << 8) | buf[10]) >>> 0,
+    validUntil:     ((buf[11] << 24) | (buf[12] << 16) | (buf[13] << 8) | buf[14]) >>> 0,
   };
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Nonce generation — call this ONCE at issuance and store the result
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function generateNonce(): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(32));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Witness factories
-// Each returns an object shaped exactly as the Compact contract expects
+// Witness factories  — ALL return [privateState, value] tuples
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Witnesses for the student's presentCredential() circuit
- */
+// ── Student witnesses (for presentCredential) ─────────────────────────────
+
+export interface StudentWitnessInputs {
+  studentSecretKey:   Uint8Array;
+  credentialPayload:  Uint8Array;
+  credentialNonce:    Uint8Array;
+  credentialIssuerPk: Uint8Array;
+}
+
 export function createStudentWitnesses(inputs: StudentWitnessInputs) {
+  const ps: CredZKPrivateState = {
+    ...createEmptyPrivateState(),
+    studentSecretKey:   inputs.studentSecretKey,
+    credentialPayload:  inputs.credentialPayload,
+    credentialNonce:    inputs.credentialNonce,
+    credentialIssuerPk: inputs.credentialIssuerPk,
+  };
+
   return {
-    studentSecretKey: (ctx: WitnessContext) => [ctx.privateState, inputs.studentSecretKey],
+    // ✅ FIXED: returns [privateState, value] tuple
+    studentSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.studentSecretKey],
 
-    credentialPayload: (ctx: WitnessContext) => [ctx.privateState, inputs.credentialPayload],
+    credentialPayload: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialPayload],
 
-    credentialNonce: (ctx: WitnessContext) => [ctx.privateState, inputs.credentialNonce],
+    credentialNonce: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialNonce],
 
-    // The JS SDK gives us access to the local Merkle tree state.
-    // We search it for the commitment and return the path.
-    findCredentialPath: (ctx: WitnessContext, commitment: Uint8Array) => {
+    credentialIssuerPk: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialIssuerPk],
+
+    findCredentialPath: (ctx: WitnessContext<any, CredZKPrivateState>, commitment: Uint8Array) => {
       const tree = ctx.ledger.credentialCommitments;
       const path = tree.findPathForLeaf(commitment);
-      if (!path) {
-        throw new Error(
-          "Credential commitment not found in tree. " +
-            "Make sure the issuer has issued this credential on-chain.",
-        );
-      }
+      if (!path) throw new Error(
+        'Credential commitment not found in Merkle tree. ' +
+        'Ensure issueCredential() was confirmed on-chain AND all credential fields ' +
+        '(degreeType, graduationYear, institutionId, issuedAt, validUntil, nonce, issuerPk) ' +
+        'exactly match what was used during issuance.'
+      );
       return [ctx.privateState, path];
     },
 
-    // Unused witnesses — provide stubs so the runtime is happy
-    adminSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    issuerSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
+    // stubs — not used in this circuit but required by Contract constructor
+    adminSecretKey:  (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.adminSecretKey],
+    issuerSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.issuerSecretKey],
   };
 }
 
-/**
- * Witnesses for the issuer's issueCredential() / revokeCredential() circuits
- */
+// ── Issuer witnesses (for issueCredential, revokeCredential) ──────────────
+
+export interface IssuerWitnessInputs {
+  issuerSecretKey: Uint8Array;
+}
+
 export function createIssuerWitnesses(inputs: IssuerWitnessInputs) {
-  return {
-    issuerSecretKey: (ctx: WitnessContext) => [ctx.privateState, inputs.issuerSecretKey],
+  const ps: CredZKPrivateState = {
+    ...createEmptyPrivateState(),
+    issuerSecretKey: inputs.issuerSecretKey,
+  };
 
-    // Stubs for unused witnesses
-    adminSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    studentSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    credentialPayload: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    credentialNonce: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    findCredentialPath: (ctx: WitnessContext, _c: Uint8Array) => {
-      throw new Error("not used");
-    },
+  return {
+    issuerSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.issuerSecretKey],
+
+    // stubs
+    adminSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.adminSecretKey],
+    studentSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.studentSecretKey],
+    credentialPayload: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialPayload],
+    credentialNonce: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialNonce],
+    credentialIssuerPk: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialIssuerPk],
+    findCredentialPath: (ctx: WitnessContext<any, CredZKPrivateState>, _commitment: Uint8Array) =>
+      [ctx.privateState, { value: _commitment, path: [] }],
   };
 }
 
-/**
- * Witnesses for admin circuits (registerIssuer, deregisterIssuer)
- */
-export function createAdminWitnesses(inputs: AdminWitnessInputs) {
-  return {
-    adminSecretKey: (ctx: WitnessContext) => [ctx.privateState, inputs.adminSecretKey],
+// ── Admin witnesses (for registerIssuer, deregisterIssuer) ────────────────
 
-    // Stubs
-    issuerSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    studentSecretKey: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    credentialPayload: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    credentialNonce: (ctx: WitnessContext) => [ctx.privateState, new Uint8Array(32)],
-    findCredentialPath: (ctx: WitnessContext, _c: Uint8Array) => {
-      throw new Error("not used");
-    },
+export interface AdminWitnessInputs {
+  adminSecretKey: Uint8Array;
+}
+
+export function createAdminWitnesses(inputs: AdminWitnessInputs) {
+  const ps: CredZKPrivateState = {
+    ...createEmptyPrivateState(),
+    adminSecretKey: inputs.adminSecretKey,
+  };
+
+  return {
+    adminSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.adminSecretKey],
+
+    // stubs
+    issuerSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.issuerSecretKey],
+    studentSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.studentSecretKey],
+    credentialPayload: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialPayload],
+    credentialNonce: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialNonce],
+    credentialIssuerPk: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+      [ctx.privateState, ctx.privateState.credentialIssuerPk],
+    findCredentialPath: (ctx: WitnessContext<any, CredZKPrivateState>, _commitment: Uint8Array) =>
+      [ctx.privateState, { value: _commitment, path: [] }],
   };
 }

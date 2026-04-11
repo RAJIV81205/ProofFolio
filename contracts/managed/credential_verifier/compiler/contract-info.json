@@ -80,7 +80,14 @@
       "proof": true,
       "arguments": [
         {
-          "name": "commitment",
+          "name": "payload",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "nonce",
           "type": {
             "type-name": "Bytes",
             "length": 32
@@ -103,6 +110,33 @@
           "type": {
             "type-name": "Bytes",
             "length": 32
+          }
+        },
+        {
+          "name": "disclosedDegree",
+          "type": {
+            "type-name": "Opaque",
+            "tsType": "string"
+          }
+        },
+        {
+          "name": "disclosedYear",
+          "type": {
+            "type-name": "Opaque",
+            "tsType": "string"
+          }
+        },
+        {
+          "name": "disclosedInstitutionId",
+          "type": {
+            "type-name": "Opaque",
+            "tsType": "string"
+          }
+        },
+        {
+          "name": "currentTime",
+          "type": {
+            "type-name": "Field"
           }
         }
       ],
@@ -143,6 +177,23 @@
         },
         {
           "name": "attestationHash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "isCredentialIssued",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "commitment",
           "type": {
             "type-name": "Bytes",
             "length": 32
@@ -227,6 +278,15 @@
     },
     {
       "name": "credentialNonce",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "credentialIssuerPk",
       "arguments": [
       ],
       "result type": {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@/hooks/useWallet';
 import { useContract } from '@/hooks/useContract';
@@ -30,6 +30,14 @@ function parseHex32(value: string): Uint8Array {
   return bytes;
 }
 
+function normalizeHex(value: string): string {
+  return value.trim().toLowerCase().replace(/^0x/, '');
+}
+
+function isHex32(value: string): boolean {
+  return /^[0-9a-f]{64}$/.test(value);
+}
+
 export default function UniversityClient() {
   const wallet = useWallet();
   const contract = useContract(
@@ -45,122 +53,120 @@ export default function UniversityClient() {
   const [degreeType, setDegreeType] = useState(DegreeType.BTech);
   const [graduationYear, setGraduationYear] = useState(currentYear);
   const [institutionId, setInstitutionId] = useState(1);
+  const [validityDays, setValidityDays] = useState(0);
 
-  const [issuerAuthorized, setIssuerAuthorized] = useState(false);
-  const [issuerCheckLoading, setIssuerCheckLoading] = useState(false);
-  const [issuerStatusMessage, setIssuerStatusMessage] = useState<string | null>(null);
   const [issuerSecretKeyHex, setIssuerSecretKeyHex] = useState('');
-  const [issuerPublicKeyHex, setIssuerPublicKeyHex] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+
+  type IssueFlowStage = 'idle' | 'verifying' | 'issuing' | 'success' | 'error';
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [issueFlowStage, setIssueFlowStage] = useState<IssueFlowStage>('idle');
+  const [issueFlowMessage, setIssueFlowMessage] = useState('');
+  const [issueFlowError, setIssueFlowError] = useState<string | null>(null);
 
   const [result, setResult] = useState<{
     txHash: string;
     nonceHex: string;
+    issuerPublicKeyHex: string;
     degreeType: number;
     graduationYear: number;
     institutionId: number;
+    issuedAt: number;
+    validUntil: number;
   } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const checkIssuerOnChain = async () => {
-      if (!wallet.isConnected) {
-        setIssuerAuthorized(false);
-        setIssuerPublicKeyHex(null);
-        setIssuerStatusMessage('Connect wallet to run on-chain issuer checks.');
-        return;
-      }
-
-      const normalizedKey = issuerSecretKeyHex.trim();
-      if (!normalizedKey) {
-        setIssuerAuthorized(false);
-        setIssuerPublicKeyHex(null);
-        setIssuerStatusMessage('Enter issuer secret key to verify authorization on Midnight.');
-        return;
-      }
-
-      setIssuerCheckLoading(true);
-      setIssuerStatusMessage('Verifying issuer authorization on Midnight...');
-
-      try {
-        const derivedIssuerPublicKeyHex = deriveIssuerPublicKeyHex(normalizedKey);
-        const authorized = await isAuthorizedIssuer(derivedIssuerPublicKeyHex);
-        if (cancelled) return;
-
-        setIssuerPublicKeyHex(derivedIssuerPublicKeyHex);
-        setIssuerAuthorized(authorized);
-        setIssuerStatusMessage(
-          authorized
-            ? 'Issuer key is authorized on Midnight and can issue credentials.'
-            : 'Issuer key is not authorized on Midnight. Admin must call registerIssuer first.',
-        );
-      } catch (error) {
-        if (cancelled) return;
-        setIssuerAuthorized(false);
-        setIssuerPublicKeyHex(null);
-        setIssuerStatusMessage(
-          error instanceof Error ? error.message : 'Unable to verify issuer authorization on-chain.',
-        );
-      } finally {
-        if (!cancelled) {
-          setIssuerCheckLoading(false);
-        }
-      }
-    };
-
-    checkIssuerOnChain();
-    return () => {
-      cancelled = true;
-    };
-  }, [deriveIssuerPublicKeyHex, isAuthorizedIssuer, issuerSecretKeyHex, wallet.isConnected]);
+  const issueInProgress = issueFlowStage === 'verifying' || issueFlowStage === 'issuing' || contract.loading;
+  const secretDerivedIssuerPublicKeyHex = (() => {
+    const normalized = normalizeHex(issuerSecretKeyHex);
+    if (!isHex32(normalized)) return null;
+    try {
+      return normalizeHex(deriveIssuerPublicKeyHex(normalized));
+    } catch {
+      return null;
+    }
+  })();
 
   const issue = async () => {
-    if (!wallet.walletAddress || !issuerAuthorized) return;
+    if (!wallet.walletAddress) return;
 
-    setActionError(null);
+    setIssueModalOpen(true);
+    setIssueFlowStage('verifying');
+    setIssueFlowError(null);
+    setIssueFlowMessage('Verifying access on Midnight...');
+    setResult(null);
+
     try {
-      const issuerSecretKey = parseHex32(issuerSecretKeyHex);
-      const derivedIssuerPk = deriveIssuerPublicKeyHex(issuerSecretKey);
-      const stillAuthorized = await isAuthorizedIssuer(derivedIssuerPk);
-
-      if (!stillAuthorized) {
-        throw new Error('Issuer authorization is not active on Midnight. Registration is required before issuance.');
+      if (!CONTRACT_ADDRESS) {
+        throw new Error('Missing contract address configuration.');
       }
+
+      if (!studentId.trim()) {
+        throw new Error('Student ID is required before issuing credential.');
+      }
+
+      const normalizedInput = normalizeHex(issuerSecretKeyHex);
+      if (!normalizedInput) {
+        throw new Error('Issuer secret key is required for issuing credentials.');
+      }
+
+      if (!isHex32(normalizedInput)) {
+        throw new Error('Issuer secret key must be exactly 64 hex characters.');
+      }
+
+      const issuerSecretKey = parseHex32(issuerSecretKeyHex);
+      const derivedIssuerPk = normalizeHex(deriveIssuerPublicKeyHex(issuerSecretKey));
+
+      // Contract-only access check: no backend key/status lookup.
+      const authorized = await isAuthorizedIssuer(derivedIssuerPk);
+      if (!authorized) {
+        const rawInputLooksAuthorized = await isAuthorizedIssuer(normalizedInput);
+        if (rawInputLooksAuthorized) {
+          throw new Error('Entered value appears to be issuer public key. Please enter issuer secret key.');
+        }
+        throw new Error('Derived issuer key is not authorized on Midnight. Ask admin to register this key first.');
+      }
+
+      setIssueFlowStage('issuing');
+      setIssueFlowMessage('Access verified on contract. Waiting for wallet signature to issue credential...');
+
+      const issuedAt = Math.floor(Date.now() / 1000);
+      const validUntil = validityDays > 0 ? issuedAt + validityDays * 24 * 60 * 60 : 0;
 
       const res = await contract.issueCredential(issuerSecretKey, {
         degreeType,
         graduationYear,
         institutionId,
+        issuedAt,
+        validUntil,
       });
 
       setResult({
         txHash: res.txHash,
         nonceHex: res.nonceHex,
+        issuerPublicKeyHex: res.issuerPublicKeyHex,
         degreeType,
         graduationYear,
         institutionId,
+        issuedAt,
+        validUntil,
       });
 
-      await fetch('/api/admin/audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'issue_credential',
-          walletAddress: wallet.walletAddress,
-          metadata: {
-            studentId,
-            issuerPublicKeyHex: derivedIssuerPk,
-            degreeType,
-            graduationYear,
-            institutionId,
-            txHash: res.txHash,
-          },
-        }),
-      });
+      setIssueFlowStage('success');
+      setIssueFlowMessage('Credential issued successfully.');
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Credential issuance failed.');
+      setIssueFlowStage('error');
+      setIssueFlowError(error instanceof Error ? error.message : 'Credential issuance failed.');
+      setIssueFlowMessage('Unable to issue credential.');
     }
+  };
+
+  const closeIssueModal = () => {
+    if (issueFlowStage === 'verifying' || issueFlowStage === 'issuing') {
+      return;
+    }
+
+    setIssueModalOpen(false);
+    setIssueFlowStage('idle');
+    setIssueFlowMessage('');
+    setIssueFlowError(null);
   };
 
   return (
@@ -187,7 +193,7 @@ export default function UniversityClient() {
         {!wallet.isConnected ? (
           <div>
             <p className="text-slate-700">
-              Connect your university wallet and verify issuer authorization on Midnight.
+              Connect your university wallet, fill details, and click issue. Access verification will run in the issue popup.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button onClick={wallet.connect} disabled={wallet.connecting} className="btn-primary">
@@ -204,19 +210,9 @@ export default function UniversityClient() {
             <div className="rounded-xl border border-slate-200 bg-white/80 p-3 text-sm">
               <p className="text-slate-600">Connected wallet</p>
               <p className="mt-1 break-all font-medium text-slate-900">{wallet.walletAddress}</p>
-              {issuerCheckLoading ? (
-                <p className="mt-2 text-xs text-slate-600">Checking issuer allowlist...</p>
-              ) : issuerAuthorized ? (
-                <div className="mt-2">
-                  <p className="text-xs font-semibold text-emerald-700">Issuer key is authorized on Midnight.</p>
-                  {issuerPublicKeyHex && (
-                    <p className="mt-1 break-all text-[11px] text-emerald-800">Issuer PK: {issuerPublicKeyHex}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="mt-2">
-                  <p className="text-xs font-semibold text-rose-700">{issuerStatusMessage ?? 'Issuer not authorized.'}</p>
-                </div>
+              <p className="mt-2 text-xs text-slate-600">Verification and on-chain access checks happen after you click Issue Credential.</p>
+              {secretDerivedIssuerPublicKeyHex && (
+                <p className="mt-2 break-all text-[11px] text-slate-700">Derived From Secret: {secretDerivedIssuerPublicKeyHex}</p>
               )}
             </div>
 
@@ -268,10 +264,21 @@ export default function UniversityClient() {
                   className="field-control"
                 />
               </label>
+
+              <label className="field-label">
+                Validity (days, 0 = no expiry)
+                <input
+                  type="number"
+                  min={0}
+                  value={validityDays}
+                  onChange={(e) => setValidityDays(Math.max(0, Number(e.target.value) || 0))}
+                  className="field-control"
+                />
+              </label>
             </div>
 
             <label className="field-label">
-              Issuer Secret Key (hex, 32 bytes)
+              Issuer Secret Key (hex, 32 bytes) - do not paste public key here
               <input
                 type="password"
                 value={issuerSecretKeyHex}
@@ -286,15 +293,13 @@ export default function UniversityClient() {
             <button
               onClick={issue}
               disabled={
-                contract.loading ||
-                !studentId ||
+                issueInProgress ||
                 !CONTRACT_ADDRESS ||
-                !issuerAuthorized ||
                 issuerSecretKeyHex.trim().length === 0
               }
               className="btn-primary"
             >
-              {contract.loading ? 'Issuing...' : 'Issue Credential'}
+              {issueInProgress ? 'Processing...' : 'Issue Credential'}
             </button>
 
             {!CONTRACT_ADDRESS && (
@@ -304,38 +309,51 @@ export default function UniversityClient() {
             )}
 
             {contract.error && <p className="text-sm text-rose-700">Error: {contract.error}</p>}
-            {actionError && <p className="text-sm text-rose-700">Error: {actionError}</p>}
-
-            {result && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-                <p className="font-semibold">Credential issued successfully</p>
-                <p className="mt-2 break-all">
-                  <span className="font-semibold">Nonce:</span> <code>{result.nonceHex}</code>
-                </p>
-                <p className="mt-1 break-all">
-                  <span className="font-semibold">Issue TX:</span> <code>{result.txHash}</code>
-                </p>
-                <p className="mt-1">
-                  <span className="font-semibold">Degree Type:</span> {result.degreeType}
-                </p>
-                <p className="mt-1">
-                  <span className="font-semibold">Graduation Year:</span> {result.graduationYear}
-                </p>
-                <p className="mt-1">
-                  <span className="font-semibold">Institution ID:</span> {result.institutionId}
-                </p>
-                <p className="mt-2 text-xs font-medium">Copy this package to Student Portal to avoid mismatched inputs:</p>
-                <pre className="mt-1 overflow-auto rounded bg-emerald-100 p-2 text-[11px]">{JSON.stringify({
-                  degreeType: result.degreeType,
-                  graduationYear: result.graduationYear,
-                  institutionId: result.institutionId,
-                  nonceHex: result.nonceHex,
-                })}</pre>
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {issueModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <h2 className="text-xl font-semibold text-slate-900">Issue Credential</h2>
+            <p className="mt-2 text-sm text-slate-600">{issueFlowMessage}</p>
+
+            {(issueFlowStage === 'verifying' || issueFlowStage === 'issuing') && (
+              <div className="mt-4 flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                <span>{issueFlowStage === 'verifying' ? 'Verifying access...' : 'Issuing credential...'}</span>
+              </div>
+            )}
+
+            {issueFlowStage === 'error' && issueFlowError && (
+              <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                {issueFlowError}
+              </div>
+            )}
+
+            {issueFlowStage === 'success' && result && (
+              <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+                <p className="font-semibold">Credential issued successfully</p>
+                <p className="mt-2 break-all"><span className="font-semibold">Nonce:</span> {result.nonceHex}</p>
+                <p className="mt-1 break-all"><span className="font-semibold">Issue TX:</span> {result.txHash}</p>
+                <p className="mt-1 break-all"><span className="font-semibold">Issuer PK:</span> {result.issuerPublicKeyHex}</p>
+                <p className="mt-1"><span className="font-semibold">Degree Type:</span> {result.degreeType}</p>
+                <p className="mt-1"><span className="font-semibold">Graduation Year:</span> {result.graduationYear}</p>
+                <p className="mt-1"><span className="font-semibold">Institution ID:</span> {result.institutionId}</p>
+                <p className="mt-1"><span className="font-semibold">Issued At:</span> {result.issuedAt}</p>
+                <p className="mt-1"><span className="font-semibold">Valid Until:</span> {result.validUntil === 0 ? 'No expiry' : String(result.validUntil)}</p>
+              </div>
+            )}
+
+            {(issueFlowStage === 'success' || issueFlowStage === 'error') && (
+              <div className="mt-5 flex justify-end">
+                <button className="btn-primary" onClick={closeIssueModal}>Close</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

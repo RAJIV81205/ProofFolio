@@ -12,6 +12,7 @@ export async function POST(req: Request) {
       city?: string;
       representativeName?: string;
       walletAddress?: string;
+      issuerPublicKeyHex?: string;
       supportingNotes?: string;
     };
 
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
       city: body.city ?? '',
       representativeName: body.representativeName ?? '',
       walletAddress: body.walletAddress ?? '',
+      issuerPublicKeyHex: body.issuerPublicKeyHex ?? '',
       supportingNotes: body.supportingNotes ?? '',
     });
 

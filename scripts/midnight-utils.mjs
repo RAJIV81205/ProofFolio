@@ -211,6 +211,7 @@ export function createDeploymentWitnesses(adminSecretKeyBytes) {
     studentSecretKey: (ctx) => [ctx.privateState, emptyBytes32()],
     credentialPayload: (ctx) => [ctx.privateState, emptyBytes32()],
     credentialNonce: (ctx) => [ctx.privateState, emptyBytes32()],
+    credentialIssuerPk: (ctx) => [ctx.privateState, emptyBytes32()],
     findCredentialPath: (_ctx, _commitment) => {
       throw new Error("findCredentialPath is not used during deployment.");
     },

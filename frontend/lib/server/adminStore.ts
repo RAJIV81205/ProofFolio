@@ -20,6 +20,9 @@ export interface AdminAuditLog {
     graduationYear?: number;
     institutionId?: number;
     txHash?: string;
+    onChainTxHash?: string;
+    issuerPublicKeyHex?: string;
+    attestationHashHex?: string;
     commitmentHex?: string;
     applicationId?: string;
     institutionName?: string;
@@ -36,6 +39,7 @@ export interface UniversityApplicationInput {
   city: string;
   representativeName: string;
   walletAddress: string;
+  issuerPublicKeyHex: string;
   supportingNotes?: string;
 }
 
@@ -53,9 +57,17 @@ function normalizeWalletAddress(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function normalizeHex32(value: string): string {
+  return value.trim().toLowerCase().replace(/^0x/, '');
+}
+
 function isWalletAddressLikelyValid(value: string): boolean {
   if (value.length < 20 || value.length > 180) return false;
   return /^[a-z0-9:_-]+$/i.test(value);
+}
+
+function isHex32(value: string): boolean {
+  return /^[0-9a-f]{64}$/.test(normalizeHex32(value));
 }
 
 function mapAuditLog(doc: {
@@ -86,6 +98,7 @@ function mapApplication(doc: {
   city: string;
   representativeName: string;
   walletAddress: string;
+  issuerPublicKeyHex?: string;
   supportingNotes?: string;
   status: 'pending' | 'approved' | 'rejected';
   reviewedBy: string | null;
@@ -104,6 +117,7 @@ function mapApplication(doc: {
     city: doc.city,
     representativeName: doc.representativeName,
     walletAddress: doc.walletAddress,
+    issuerPublicKeyHex: doc.issuerPublicKeyHex ?? '',
     supportingNotes: doc.supportingNotes,
     status: doc.status,
     reviewedBy: doc.reviewedBy,
@@ -197,6 +211,7 @@ function validateApplicationInput(input: UniversityApplicationInput) {
     'city',
     'representativeName',
     'walletAddress',
+    'issuerPublicKeyHex',
   ];
 
   for (const key of required) {
@@ -216,6 +231,10 @@ function validateApplicationInput(input: UniversityApplicationInput) {
   if (!isWalletAddressLikelyValid(input.walletAddress)) {
     throw new Error('Invalid wallet address format.');
   }
+
+  if (!isHex32(input.issuerPublicKeyHex)) {
+    throw new Error('issuerPublicKeyHex must be exactly 64 hex characters.');
+  }
 }
 
 export async function submitUniversityApplication(input: UniversityApplicationInput) {
@@ -231,6 +250,7 @@ export async function submitUniversityApplication(input: UniversityApplicationIn
     city: input.city.trim(),
     representativeName: input.representativeName.trim(),
     walletAddress: normalizeWalletAddress(input.walletAddress),
+    issuerPublicKeyHex: normalizeHex32(input.issuerPublicKeyHex),
     supportingNotes: input.supportingNotes?.trim() ?? '',
   };
 
@@ -282,6 +302,10 @@ export async function reviewUniversityApplication(params: {
   actor: string;
   decision: 'approved' | 'rejected';
   reviewNote?: string;
+  issuerPublicKeyHex?: string;
+  attestationHashHex?: string;
+  onChainTxHash?: string;
+  onChainAlreadyAuthorized?: boolean;
 }) {
   await connectMongo();
 
@@ -294,17 +318,47 @@ export async function reviewUniversityApplication(params: {
     throw new Error('Application not found.');
   }
 
-  application.status = params.decision;
-  application.reviewedBy = params.actor;
-  application.reviewedAt = new Date();
-  application.reviewNote = params.reviewNote?.trim() || null;
-  await application.save();
-
   if (params.decision === 'approved') {
+    const issuerPublicKeyHex = normalizeHex32(
+      params.issuerPublicKeyHex ?? String(application.issuerPublicKeyHex ?? ''),
+    );
+    if (!isHex32(issuerPublicKeyHex)) {
+      throw new Error(
+        'issuerPublicKeyHex must be exactly 64 hex characters. Enter issuer public key in admin review before approving.',
+      );
+    }
+
+    const attestationHashHex = normalizeHex32(params.attestationHashHex ?? '');
+    if (!isHex32(attestationHashHex)) {
+      throw new Error('attestationHashHex must be exactly 64 hex characters.');
+    }
+
+    const onChainTxHash = normalizeHex32(params.onChainTxHash ?? '');
+    const onChainAlreadyAuthorized = Boolean(params.onChainAlreadyAuthorized);
+
+    if (!onChainAlreadyAuthorized) {
+      if (!onChainTxHash || !/^[0-9a-f]{64}$/.test(onChainTxHash)) {
+        throw new Error(
+          'On-chain registerIssuer transaction hash is required. Please sign registerIssuer in Admin Panel first.',
+        );
+      }
+    }
+
+    application.status = params.decision;
+    application.reviewedBy = params.actor;
+    application.reviewedAt = new Date();
+    application.reviewNote = params.reviewNote?.trim() || null;
+    application.issuerPublicKeyHex = issuerPublicKeyHex;
+    await application.save();
+
     await IssuerModel.findOneAndUpdate(
       { walletAddress: application.walletAddress },
       {
         walletAddress: application.walletAddress,
+        issuerPublicKeyHex,
+        attestationHashHex,
+        onChainRegisterTxHash: onChainTxHash || null,
+        onChainRegisteredAt: new Date(),
         approved: true,
         approvedBy: params.actor,
         approvedAt: new Date(),
@@ -321,10 +375,19 @@ export async function reviewUniversityApplication(params: {
       metadata: {
         applicationId: application._id.toString(),
         institutionName: application.institutionName,
+        issuerPublicKeyHex,
+        attestationHashHex,
+        onChainTxHash: onChainTxHash || undefined,
         reviewNote: application.reviewNote ?? undefined,
       },
     });
   } else {
+    application.status = params.decision;
+    application.reviewedBy = params.actor;
+    application.reviewedAt = new Date();
+    application.reviewNote = params.reviewNote?.trim() || null;
+    await application.save();
+
     await IssuerModel.deleteOne({ walletAddress: application.walletAddress });
     await appendAuditLog({
       action: 'reject_application',

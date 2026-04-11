@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAdminSessionFromServerCookies } from '@/lib/server/auth';
 import { listUniversityApplications, reviewUniversityApplication } from '@/lib/server/adminStore';
 
+export const runtime = 'nodejs';
+
 async function requireAdmin() {
   const session = await getAdminSessionFromServerCookies();
   return session ?? null;
@@ -35,6 +37,10 @@ export async function PATCH(req: Request) {
       applicationId?: string;
       decision?: 'approved' | 'rejected';
       reviewNote?: string;
+      issuerPublicKeyHex?: string;
+      attestationHashHex?: string;
+      onChainTxHash?: string;
+      onChainAlreadyAuthorized?: boolean;
     };
 
     if (!body.applicationId || !body.decision) {
@@ -49,6 +55,10 @@ export async function PATCH(req: Request) {
       actor: session.username,
       decision: body.decision,
       reviewNote: body.reviewNote,
+      issuerPublicKeyHex: body.issuerPublicKeyHex,
+      attestationHashHex: body.attestationHashHex,
+      onChainTxHash: body.onChainTxHash,
+      onChainAlreadyAuthorized: body.onChainAlreadyAuthorized,
     });
 
     return NextResponse.json({ ok: true, application });

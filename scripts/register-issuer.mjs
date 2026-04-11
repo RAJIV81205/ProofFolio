@@ -108,6 +108,7 @@ function deriveIssuerPublicKey(issuerSecretKey) {
     studentSecretKey: () => [null, zero],
     credentialPayload: () => [null, zero],
     credentialNonce: () => [null, zero],
+    credentialIssuerPk: () => [null, zero],
     findCredentialPath: () => [null, { leaf: zero, path: [] }],
   };
 

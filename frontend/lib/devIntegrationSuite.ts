@@ -2,6 +2,7 @@ import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
 import type {
   IssueCredentialResult,
   LedgerStateSnapshot,
+  PresentationDisclosureInput,
   PresentCredentialResult,
   PresentationLookupResult,
 } from '@/hooks/useContract';
@@ -54,6 +55,8 @@ export interface ContractIntegrationFacade {
     credentialData: CredentialData,
     nonceHex: string,
     challengeHex: string,
+    issuerPublicKeyHex: string,
+    disclosure?: PresentationDisclosureInput,
   ) => Promise<PresentCredentialResult>;
   registerIssuer: (
     adminSecretKey: Uint8Array,
@@ -61,7 +64,7 @@ export interface ContractIntegrationFacade {
     attestationHash: Uint8Array,
   ) => Promise<string>;
   deregisterIssuer: (adminSecretKey: Uint8Array, issuerPublicKey: Uint8Array) => Promise<string>;
-  revokeCredential: (issuerSecretKey: Uint8Array, commitment: Uint8Array | string) => Promise<string>;
+  revokeCredential: (issuerSecretKey: Uint8Array, credentialData: CredentialData, nonceHex: string) => Promise<string>;
   isAuthorizedIssuer: (issuerPublicKey: Uint8Array | string) => Promise<boolean>;
   isTrustedIssuer: (issuerPublicKey: Uint8Array | string, attestationHash: Uint8Array | string) => Promise<boolean>;
   isCredentialRevoked: (commitment: Uint8Array | string) => Promise<boolean>;
@@ -620,6 +623,8 @@ export async function runIntegrationSuite(options: RunIntegrationSuiteOptions): 
     degreeType: DegreeType.BTech,
     graduationYear: new Date().getFullYear(),
     institutionId: 999,
+    issuedAt: Math.floor(Date.now() / 1000),
+    validUntil: 0,
   };
 
   const issueOk = await runStep('issue-credential', async () => {
@@ -674,6 +679,12 @@ export async function runIntegrationSuite(options: RunIntegrationSuiteOptions): 
       credentialData,
       outputs.issueNonceHex as string,
       challengeHex,
+      issuerPublicKeyHex,
+      {
+        degree: String(credentialData.degreeType),
+        year: String(credentialData.graduationYear),
+        institutionId: String(credentialData.institutionId),
+      },
     );
 
     if (!res.verified || !res.txHash) {
@@ -724,7 +735,8 @@ export async function runIntegrationSuite(options: RunIntegrationSuiteOptions): 
   const revokeOk = await runStep('revoke-credential', async () => {
     const txHash = await options.contract.revokeCredential(
       issuerSecretKey,
-      outputs.commitmentHex as string,
+      credentialData,
+      outputs.issueNonceHex as string,
     );
 
     outputs.revokeTxHash = txHash;

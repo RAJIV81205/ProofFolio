@@ -41,7 +41,10 @@ export default function StudentPage() {
   const [degreeType, setDegreeType] = useState(DegreeType.BTech);
   const [graduationYear, setGraduationYear] = useState(currentYear);
   const [institutionId, setInstitutionId] = useState(1);
+  const [issuedAt, setIssuedAt] = useState(Math.floor(Date.now() / 1000));
+  const [validUntil, setValidUntil] = useState(0);
   const [nonceHex, setNonceHex] = useState('');
+  const [issuerPublicKeyHex, setIssuerPublicKeyHex] = useState('');
   const [credentialPackage, setCredentialPackage] = useState('');
   const [challengeHex, setChallengeHex] = useState(randomHex32());
   const [studentSecretKeyHex, setStudentSecretKeyHex] = useState('');
@@ -54,9 +57,15 @@ export default function StudentPage() {
       const studentSecretKey = parseHex32(studentSecretKeyHex, 'Student secret key');
       const res = await contract.presentCredential(
         studentSecretKey,
-        { degreeType, graduationYear, institutionId },
+        { degreeType, graduationYear, institutionId, issuedAt, validUntil },
         nonceHex,
         challengeHex,
+        issuerPublicKeyHex,
+        {
+          degree: String(degreeType),
+          year: String(graduationYear),
+          institutionId: String(institutionId),
+        },
       );
 
       if (res.verified && res.txHash) {
@@ -71,20 +80,29 @@ export default function StudentPage() {
     setPageError(null);
     try {
       const parsed = JSON.parse(credentialPackage) as {
+        issuerPublicKeyHex?: string;
         degreeType?: number;
         graduationYear?: number;
         institutionId?: number;
+        issuedAt?: number;
+        validUntil?: number;
         nonceHex?: string;
       };
 
+      if (typeof parsed.issuerPublicKeyHex !== 'string') throw new Error('Package missing issuerPublicKeyHex.');
       if (typeof parsed.degreeType !== 'number') throw new Error('Package missing degreeType.');
       if (typeof parsed.graduationYear !== 'number') throw new Error('Package missing graduationYear.');
       if (typeof parsed.institutionId !== 'number') throw new Error('Package missing institutionId.');
+      if (typeof parsed.issuedAt !== 'number') throw new Error('Package missing issuedAt.');
+      if (typeof parsed.validUntil !== 'number') throw new Error('Package missing validUntil.');
       if (typeof parsed.nonceHex !== 'string') throw new Error('Package missing nonceHex.');
 
+      setIssuerPublicKeyHex(parsed.issuerPublicKeyHex.trim());
       setDegreeType(parsed.degreeType);
       setGraduationYear(parsed.graduationYear);
       setInstitutionId(parsed.institutionId);
+      setIssuedAt(parsed.issuedAt);
+      setValidUntil(parsed.validUntil);
       setNonceHex(parsed.nonceHex.trim());
     } catch (error) {
       setPageError(error instanceof Error ? error.message : 'Invalid credential package JSON.');
@@ -164,6 +182,16 @@ export default function StudentPage() {
             </label>
 
             <label className="field-label">
+              Issuer Public Key (hex, 32 bytes)
+              <input
+                value={issuerPublicKeyHex}
+                onChange={(e) => setIssuerPublicKeyHex(e.target.value.trim())}
+                className="field-control font-mono text-xs"
+                placeholder="64-char hex"
+              />
+            </label>
+
+            <label className="field-label">
               Credential Nonce (hex from university)
               <input
                 value={nonceHex}
@@ -174,12 +202,34 @@ export default function StudentPage() {
             </label>
 
             <label className="field-label">
+              Issued At (unix seconds)
+              <input
+                type="number"
+                min={0}
+                value={issuedAt}
+                onChange={(e) => setIssuedAt(Math.max(0, Number(e.target.value) || 0))}
+                className="field-control"
+              />
+            </label>
+
+            <label className="field-label">
+              Valid Until (unix seconds, 0 = no expiry)
+              <input
+                type="number"
+                min={0}
+                value={validUntil}
+                onChange={(e) => setValidUntil(Math.max(0, Number(e.target.value) || 0))}
+                className="field-control"
+              />
+            </label>
+
+            <label className="field-label">
               Credential Package JSON (from university panel)
               <textarea
                 value={credentialPackage}
                 onChange={(e) => setCredentialPackage(e.target.value)}
                 className="field-control min-h-24 font-mono text-xs"
-                placeholder='{"degreeType":0,"graduationYear":2026,"institutionId":1,"nonceHex":"..."}'
+                placeholder='{"issuerPublicKeyHex":"...","degreeType":0,"graduationYear":2026,"institutionId":1,"issuedAt":1712000000,"validUntil":0,"nonceHex":"..."}'
                 spellCheck={false}
               />
               <button type="button" className="btn-ghost mt-2" onClick={importPackage}>
@@ -214,7 +264,7 @@ export default function StudentPage() {
 
             <button
               onClick={submitProof}
-              disabled={contract.loading || !nonceHex || !studentSecretKeyHex || !CONTRACT_ADDRESS}
+              disabled={contract.loading || !nonceHex || !issuerPublicKeyHex || !studentSecretKeyHex || !CONTRACT_ADDRESS}
               className="btn-primary"
             >
               {contract.loading ? 'Generating proof...' : 'Generate & Submit Proof'}

@@ -6,6 +6,7 @@ export type Witnesses<PS> = {
   studentSecretKey(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   credentialPayload(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   credentialNonce(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+  credentialIssuerPk(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   findCredentialPath(context: __compactRuntime.WitnessContext<Ledger, PS>,
                      commitment_0: Uint8Array): [PS, { leaf: Uint8Array,
                                                        path: { sibling: { field: bigint
@@ -25,14 +26,21 @@ export type ImpureCircuits<PS> = {
                   payload_0: Uint8Array,
                   nonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   revokeCredential(context: __compactRuntime.CircuitContext<PS>,
-                   commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                   payload_0: Uint8Array,
+                   nonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   presentCredential(context: __compactRuntime.CircuitContext<PS>,
-                    verifierChallenge_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                    verifierChallenge_0: Uint8Array,
+                    disclosedDegree_0: string,
+                    disclosedYear_0: string,
+                    disclosedInstitutionId_0: string,
+                    currentTime_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   isAuthorizedIssuer(context: __compactRuntime.CircuitContext<PS>,
                      issuerPk_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isTrustedIssuer(context: __compactRuntime.CircuitContext<PS>,
                   issuerPk_0: Uint8Array,
                   attestationHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
+  isCredentialIssued(context: __compactRuntime.CircuitContext<PS>,
+                     commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isCredentialRevoked(context: __compactRuntime.CircuitContext<PS>,
                       commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isPresentationNullifierUsed(context: __compactRuntime.CircuitContext<PS>,
@@ -49,14 +57,21 @@ export type ProvableCircuits<PS> = {
                   payload_0: Uint8Array,
                   nonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   revokeCredential(context: __compactRuntime.CircuitContext<PS>,
-                   commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                   payload_0: Uint8Array,
+                   nonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   presentCredential(context: __compactRuntime.CircuitContext<PS>,
-                    verifierChallenge_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                    verifierChallenge_0: Uint8Array,
+                    disclosedDegree_0: string,
+                    disclosedYear_0: string,
+                    disclosedInstitutionId_0: string,
+                    currentTime_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   isAuthorizedIssuer(context: __compactRuntime.CircuitContext<PS>,
                      issuerPk_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isTrustedIssuer(context: __compactRuntime.CircuitContext<PS>,
                   issuerPk_0: Uint8Array,
                   attestationHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
+  isCredentialIssued(context: __compactRuntime.CircuitContext<PS>,
+                     commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isCredentialRevoked(context: __compactRuntime.CircuitContext<PS>,
                       commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isPresentationNullifierUsed(context: __compactRuntime.CircuitContext<PS>,
@@ -76,14 +91,21 @@ export type Circuits<PS> = {
                   payload_0: Uint8Array,
                   nonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   revokeCredential(context: __compactRuntime.CircuitContext<PS>,
-                   commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                   payload_0: Uint8Array,
+                   nonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   presentCredential(context: __compactRuntime.CircuitContext<PS>,
-                    verifierChallenge_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+                    verifierChallenge_0: Uint8Array,
+                    disclosedDegree_0: string,
+                    disclosedYear_0: string,
+                    disclosedInstitutionId_0: string,
+                    currentTime_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   isAuthorizedIssuer(context: __compactRuntime.CircuitContext<PS>,
                      issuerPk_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isTrustedIssuer(context: __compactRuntime.CircuitContext<PS>,
                   issuerPk_0: Uint8Array,
                   attestationHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
+  isCredentialIssued(context: __compactRuntime.CircuitContext<PS>,
+                     commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isCredentialRevoked(context: __compactRuntime.CircuitContext<PS>,
                       commitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isPresentationNullifierUsed(context: __compactRuntime.CircuitContext<PS>,
@@ -125,8 +147,12 @@ export type Ledger = {
     [Symbol.iterator](): Iterator<Uint8Array>
   };
   readonly adminKey: Uint8Array;
-  readonly verificationCount: bigint;
   readonly issuanceCount: bigint;
+  readonly verificationCount: bigint;
+  readonly lastChallengeHash: Uint8Array;
+  readonly lastDisclosedDegree: string;
+  readonly lastDisclosedYear: string;
+  readonly lastDisclosedInstitutionId: string;
 }
 
 export type ContractReferenceLocations = any;
