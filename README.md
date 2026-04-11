@@ -1,490 +1,87 @@
-# CredZK
+# CredZK: Privacy-Preserving Academic Credential Verification
 
-## Privacy-Preserving Academic Credential Verification on Midnight
-
-> **Tagline:** Verify qualifications, not personal data.
+> **Tagline:** Verify qualifications, not personal data. Built on the Midnight Network.
 
 ---
 
-# 1. Project Overview
+## ❌ The Problem
 
-**CredZK** is a privacy-first academic credential verification protocol built on the **Midnight Network** using **Compact smart contracts** and **zero-knowledge proofs (ZKPs)**.
+Credential fraud is a massive global issue, but current verification systems are broken:
+* **Privacy Leakage:** Students are forced to share full academic records (transcripts, DOBs) just to prove a single degree.
+* **High Fraud:** PDFs and scanned documents are easily forged.
+* **Slow Verification:** Manual background checks take weeks and rely on costly third-party agencies.
+* **Replay Attacks:** Once a document is shared, it can be copied or reused maliciously.
 
-The platform enables:
+## ✅ Our Solution
 
-* **Universities** to issue tamper-proof academic credentials
-* **Students** to prove their qualifications privately
-* **Employers** to instantly verify authenticity
-
-Unlike traditional verification systems, CredZK never exposes:
-
-* student names
-* marksheets
-* transcripts
-* DOB
-* personal identifiers
-
-Only cryptographic proofs are shared.
-
----
-
-# 2. Problem Statement
-
-Credential fraud is a massive global issue.
-
-Common problems:
-
-* fake degrees and forged certificates
-* slow manual verification process
-* privacy leakage through transcript sharing
-* employer dependency on third-party verification agencies
-* risk of document tampering
-
-Students are often forced to share **full academic records** even when the employer only needs proof of one claim.
-
-Example:
-
-Instead of sharing an entire transcript, employers usually only need:
-
-> "Does this person have a valid Computer Science degree issued after 2020?"
-
-CredZK solves this exact problem.
-
----
-
-# 3. Why Do We Need This?
-
-This project is needed because modern verification systems lack:
-
-## Privacy
-
-Sensitive data should not be shared unnecessarily.
-
-## Trust
-
-Employers need instant cryptographic trust.
-
-## Speed
-
-Verification should happen in seconds.
-
-## Fraud prevention
-
-Fake credentials must be impossible to forge.
-
-## Replay protection
-
-Previously used proofs should not be reused.
-
----
-
-# 4. What Problems It Solves
-
-CredZK solves:
-
-* fake degree fraud
-* transcript forgery
-* identity leakage
-* verification delays
-* replay attacks
-* fake university claims
-* unverifiable PDFs / scanned documents
-
----
-
-# 5. Core Solution
-
-The solution works in 3 layers:
-
-## Issuer Layer
-
-University issues credential hash on-chain.
-
-## Prover Layer
-
-Student generates proof locally.
-
-## Verifier Layer
-
-Employer verifies proof without seeing private data.
-
----
-
-# 6. Tech Stack
-
-## Blockchain / ZK
-
-* Midnight Network
-* Compact smart contracts
-* Zero Knowledge Proof circuits
-* Merkle Tree commitments
-* Nullifier anti-replay logic
-
-## Frontend
-
-* React
-* Next.js / Vite
-* TypeScript
-* Tailwind CSS
-
-## Wallet
-
-* Lace Wallet
-* Midnight dApp connector
-
-## Backend / Local Witness
-
-* TypeScript witness providers
-* Local encrypted storage
-
----
-
-# On-Chain Issuer Registration
-
-`issueCredential` only succeeds if the issuer public key is registered on-chain.
-
-Run a dry-run first:
-
-```bash
-npm run register-issuer:dry-run -- --issuer-secret "$(openssl rand -hex 32)"
-```
-
-Register issuer on-chain:
-
-```bash
-npm run register-issuer -- \
-  --issuer-secret "<64-hex>" \
-  --attestation-hash "$(openssl rand -hex 32)"
-```
-
-Requirements for non-dry-run:
-
-* `MIDNIGHT_OPERATOR_SEED`
-* `CREDZK_ADMIN_KEY`
-* `NEXT_PUBLIC_CONTRACT_ADDRESS` (or `deployment.json` present)
-
----
-
-# Developer Integration Guide (Frontend)
-
-Use the built-in guide page to run end-to-end checks and transaction tests through the 1AM wallet:
-
-* URL: `/developer-integration-guide`
-* Features:
-  * wallet detection/connect validation
-  * address/balance/config checks
-  * contract ledger read check
-  * full transaction suite: `registerIssuer`, `issueCredential`, `presentCredential`, `revokeCredential`
-  * optional cleanup: `deregisterIssuer`
-  * transaction hash verification and step-by-step pass/fail output
-
-Required inputs on the guide page:
-
-* `ADMIN_SECRET_KEY` (contract admin witness key, 64 hex chars)
-* `ISSUER_SECRET_KEY` (64 hex chars)
-* `STUDENT_SECRET_KEY` (64 hex chars; can be generated on page)
-
-Before opening the page:
-
-1. Start frontend: `cd frontend && npm run dev`
-2. Ensure `NEXT_PUBLIC_CONTRACT_ADDRESS` and network URLs are set in `frontend/.env.local`
-3. Connect 1AM wallet extension in browser
-
----
-
-# 7. Main Features
-
-## Private credential issuance
-
-Universities issue only commitment hashes.
-
-## Selective disclosure
-
-Students prove only required claims.
-
-## Instant verification
-
-Employers receive valid / invalid response.
-
-## Replay protection
-
-Nullifiers prevent proof reuse.
-
-## Audit trail
-
-Verification count stored on-chain.
-
-## Authorized issuer registry
-
-Only approved universities can issue.
-
----
-
-# 8. Architecture
-
-## Public Ledger
-
-Stores:
-
-* authorizedIssuers
-* credentialCommitments
-* usedNullifiers
-* verificationCount
-
-## Private Local Storage
-
-Stores:
-
-* studentName
-* degreeType
-* graduationYear
-* secret keys
-* nonce
-
-Private data never leaves device.
-
----
-
-# 9. Smart Contract Design
-
-## Contract Name
-
-`credential_verifier.compact`
-
-## Public Ledgers
-
-```ts
-export ledger authorizedIssuers: Set<Bytes<32>>;
-export ledger credentialCommitments: HistoricMerkleTree<10, Bytes<32>>;
-export ledger usedNullifiers: Set<Bytes<32>>;
-export ledger verificationCount: Counter;
-```
-
----
-
-# 10. Contract Functions
-
-## register_issuer()
-
-Registers authorized universities.
-
-```ts
-export circuit register_issuer(issuerPk: Bytes<32>): [] {
-  authorizedIssuers.insert(disclose(issuerPk));
-}
-```
-
-## issue_credential()
-
-University issues credential commitment.
-
-```ts
-export circuit issue_credential(credData: Bytes<32>, nonce: Bytes<32>): [] {
-  const commitment = credentialCommitment(credData, nonce);
-  credentialCommitments.insert(disclose(commitment));
-}
-```
-
-## prove_credential()
-
-Student generates local ZK proof.
-
-```ts
-export circuit prove_credential(): [] {
-  const nul = credentialNullifier(sk, nonce);
-  usedNullifiers.insert(disclose(nul));
-  verificationCount.increment(1);
-}
-```
-
----
-
-# 11. Witness Layer
-
-## File
-
-`witness.ts`
-
-This layer supplies local private data.
-
-```ts
-export interface CredentialStore {
-  issuerSecretKey?: Uint8Array;
-  studentSecretKey?: Uint8Array;
-  credentialData?: Uint8Array;
-  credentialNonce?: Uint8Array;
-}
-```
-
-```ts
-export function createWitnesses(store: CredentialStore) {
-  return {
-    issuerSecretKey: () => store.issuerSecretKey!,
-    studentSecretKey: () => store.studentSecretKey!,
-    credentialData: () => store.credentialData!,
-    credentialNonce: () => store.credentialNonce!
-  };
-}
-```
-
----
-
-# 12. Frontend User Flow
-
-## Page 1 — University Portal
-
-Input:
-
-* student id
-* degree type
-* graduation year
-* institution
-
-Action:
-`issue_credential()`
-
-Output:
-credential issued confirmation
-
----
-
-## Page 2 — Student Portal
-
-* connect wallet
-* select credential
-* choose proof condition
-* generate ZK proof locally
-* generate shareable link / QR
-
----
-
-## Page 3 — Employer Portal
-
-* scan QR / paste proof link
-* verify credential
-* check freshness
-* display result
-
----
-
-# 13. High-Level Flow
-
-1. University registers
-2. Credential issued
-3. Commitment stored on-chain
-4. Student creates ZK proof
-5. Employer verifies
-6. Nullifier stored
-7. Verification count increments
-
----
-
-# 14. Included Code Samples
-
-## Frontend deploy flow
-
-```ts
-async function connectAndDeploy() {
-  const provider = await MidnightProvider.connect();
-  const witnesses = createWitnesses(localCredentialStore);
-  const contract = new Contract(witnesses);
-  return contract.deployTx(provider);
-}
-```
-
----
-
-# 15. Why Midnight?
-
-Midnight is ideal because it provides:
-
-* privacy-first smart contracts
-* local witness computation
-* ZK-native circuits
-* secure selective disclosure
-* compact contract support
-
-This project directly aligns with Midnight’s strongest use case:
-
-> **private verification systems**
-
----
-
-# 16. MVP Roadmap
-
-## Phase 1
-
-* issuer registration
-* credential issuance
-* local witness setup
-
-## Phase 2
-
-* proof generation
-* QR sharing
-* employer verification
-
-## Phase 3
-
-* dashboard analytics
-* institution onboarding
-* revocation support
-
----
-
-# 17. Future Scope
-
-* government certificates
-* medical licenses
-* skill badges
-* professional certificates
-* passport verification
-* KYC credentials
-
----
-
-# 18. Submission Pitch
-
-CredZK transforms academic verification from a slow, document-heavy, privacy-invasive process into an instant, cryptographically trusted zero-knowledge protocol.
-
-It ensures trust without disclosure.
+**CredZK** is a privacy-first credential verification protocol built using **Zero-Knowledge Proofs (ZKPs)** on the **Midnight Network**.
+It allows universities to issue tamper-proof credentials on-chain. Students can then generate local cryptographic proofs to prove their qualifications to employers *without* revealing their actual personal data.
 
 **One proof. Zero data exposure.**
 
+## 💡 Use Cases
+
+* **Academic Degrees:** Prove graduation year and degree type without sharing grades.
+* **Professional Certifications:** Verify active medical, legal, or technical licenses.
+* **Skill Badges:** Confirm completion of bootcamps or training programs.
+* **KYC / Identity:** (Future scope) Prove age or citizenship without revealing passport details.
+
+## 🛠 Tech Stack
+
+* **Blockchain / Smart Contracts:** Midnight Network, Compact (smart contract language)
+* **Zero-Knowledge:** ZK-SNARKs, local ZK circuits, Merkle Tree commitments, Nullifiers
+* **Frontend:** React, Next.js (App Router), TypeScript, Tailwind CSS
+* **Wallet & Integration:** Lace Wallet, Midnight dApp Connector, Midnight.js
+
+## ✨ Features
+
+* **Authorized Issuer Registry:** Only whitelisted universities can issue credentials to prevent fake institutions.
+* **Private Issuance:** Universities only publish a hashed commitment to the blockchain, never the raw data.
+* **Instant Verification:** Employers receive a definitive Yes/No response in seconds via blockchain consensus.
+* **Replay Protection:** Cryptographic nullifiers ensure that a specific proof cannot be reused.
+* **On-Chain Audit Trail:** The ledger publicly tracks the total number of verifications without linking them to individuals.
+
+## 📜 Contract Address
+
+* **Network:** Midnight Testnet / Pre-prod
+* **Contract Address:** *(Populated after deployment via `deployment.json` / `frontend/.env.local`)*
+
+## 🔐 Privacy Functions
+
+CredZK leverages Midnight's data-protecting architecture:
+* **Selective Disclosure:** Students only prove the claims the employer asked for.
+* **Local Witness Execution:** Private data (student secret keys, raw credential JSON) stays fully local in the wallet/browser.
+* **Zero-Knowledge Proofs:** The network verifies the truth of a statement ("This student holds a valid degree") without ever seeing the inputs that make it true.
+
+## 🔄 Application Flows
+
+1. **University Portal (Issuance)**
+   * Registers as an authorized issuer.
+   * Inputs student details locally.
+   * Hashes the credential and posts the commitment to the Midnight ledger.
+2. **Student Portal (Proof Generation)**
+   * Imports credential package (metadata + secret key).
+   * Generates a local ZK proof satisfying the employer's challenge.
+   * Never sends private data to the network.
+3. **Employer Portal (Verification)**
+   * Receives the proof transaction hash from the student.
+   * Validates the proof against the Midnight smart contract.
+   * Views verified claims instantly on a secure dashboard.
+
 ---
 
-# 19. One-Click Deployment (Production Flow)
+## 💻 Developer Guide
 
-This repository now includes a robust deployment pipeline that follows Midnight docs and real-world ops needs:
-
-* compile contract artifacts if missing
-* verify proof server availability (optionally auto-start Docker container)
-* create/restore wallet from seed
-* wait for funding and DUST readiness
-* deploy contract on Midnight
-* write `deployment.json`
-* update `frontend/.env.local` with contract address
-
-## Commands
-
+### Quick Start
 ```bash
 npm install
 npm run compile
 npm run start-proof-server
 npm run deploy
+cd frontend && npm run dev
 ```
 
-## Non-interactive deployment (CI / production automation)
-
-```bash
-MIDNIGHT_NETWORK=preprod \
-MIDNIGHT_SEED=<64_HEX_SEED> \
-CREDZK_ADMIN_KEY=<64_HEX_ADMIN_KEY> \
-npm run deploy:non-interactive
-```
-
-## Secure defaults
-
-* seed is **never written** to disk by deploy script
-* `deployment.json` and `frontend/.env.local` are gitignored
-* admin key can be injected via `CREDZK_ADMIN_KEY` instead of prompts
+### Testing & Integration
+Use the built-in testing suite to run end-to-end ZK transactions logic:
+* **URL:** `http://localhost:3000/developer-integration-guide`
+* Provides wallet detection, contract ledger reads, and full lifecycle execution (`registerIssuer`, `issueCredential`, `presentCredential`).
