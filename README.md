@@ -43,7 +43,7 @@ It allows universities to issue tamper-proof credentials on-chain. Students can 
 
 ## 📜 Contract Address
 
-* **Network:** Midnight Testnet / Pre-prod
+* **Network:** Midnight Preprod
 * **Contract Address:** *24f7547db6f6fcab45b7468bb42b7dc6a4ec488ee307aa2f99e987a295384924*
 
 ## 🔐 Privacy Functions
