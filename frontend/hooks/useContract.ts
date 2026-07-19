@@ -46,7 +46,7 @@ import type { ConnectedAPI } from "@midnight-ntwrk/dapp-connector-api";
 import {
   Contract,
   ledger as decodeLedger,
-} from "../../contracts/managed/credential_verifier/contract/index.js";
+} from "@/contracts/managed/credential_verifier/contract/index.js";
 import { CompiledContract } from "@midnight-ntwrk/compact-js";
 import { submitCallTx } from "@midnight-ntwrk/midnight-js-contracts";
 import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";

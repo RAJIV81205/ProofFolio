@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 // @ts-ignore
-import { Contract } from '../../../../contracts/managed/credential_verifier/contract/index.js';
+import { Contract } from '@/contracts/managed/credential_verifier/contract/index.js';
 
 export const runtime = 'nodejs';
 

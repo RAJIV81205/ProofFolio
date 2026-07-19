@@ -16,7 +16,7 @@ import type { WalletServiceUriConfig } from '@/hooks/useWallet';
 import { build1amProviders } from '@/hooks/useContract';
 
 // @ts-ignore generated contract bundle has its own declaration file.
-import { Contract } from '../../contracts/managed/credential_verifier/contract/index.js';
+import { Contract } from '@/contracts/managed/credential_verifier/contract/index.js';
 
 const CONTRACT_NAME = 'credential_verifier';
 const PRIVATE_STATE_ID = 'ProofFolio-browser-deploy';
