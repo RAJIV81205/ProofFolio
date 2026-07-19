@@ -8,11 +8,11 @@ import type {
   ConnectionStatus,
   InitialAPI,
 } from '@midnight-ntwrk/dapp-connector-api';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 
 export type WalletServiceUriConfig = {
   indexerUri: string;
   indexerWsUri: string;
-  proofServerUri: string;
   nodeUri: string;
   networkId: string;
 };
@@ -44,7 +44,6 @@ function mapRuntimeConfiguration(config: Configuration): WalletServiceUriConfig 
   return {
     indexerUri: config.indexerUri,
     indexerWsUri: config.indexerWsUri,
-    proofServerUri: config.proverServerUri ?? '',
     nodeUri: config.substrateNodeUri,
     networkId: config.networkId,
   };
@@ -64,6 +63,7 @@ export function useWallet() {
     setState((s) => ({ ...s, connecting: true, error: null }));
 
     try {
+      setNetworkId('preprod');
       if (typeof window === 'undefined') {
         throw new Error('Wallet can only be connected in a browser.');
       }
@@ -75,7 +75,7 @@ const wallet = await detectWallet();
         );
       }
 
-      const desiredNetwork = process.env.NEXT_PUBLIC_MIDNIGHT_NETWORK ?? 'preview';
+      const desiredNetwork = 'preprod';
       let connectedApi: ConnectedAPI;
       try {
         connectedApi = await wallet.connect(desiredNetwork);

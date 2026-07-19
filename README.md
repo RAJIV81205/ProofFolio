@@ -44,7 +44,7 @@ It allows universities to issue tamper-proof credentials on-chain. Students can 
 ## 📜 Contract Address
 
 * **Network:** Midnight Preprod
-* **Contract Address:** *24f7547db6f6fcab45b7468bb42b7dc6a4ec488ee307aa2f99e987a295384924*
+* **Contract Address:** *8131a6c88f0b726c57bcf471cf8831947749e4dc68bd458c3692af73605f74d3*
 
 ## 🔐 Privacy Functions
 
@@ -76,10 +76,16 @@ ProofFolio leverages Midnight's data-protecting architecture:
 ```bash
 npm install
 npm run compile
-npm run start-proof-server
-npm run deploy
 cd frontend && npm run dev
 ```
+
+Open `http://localhost:3000/deploy`, connect the 1AM browser extension on Midnight
+preprod, enter the deployment admin secret key, and click **Deploy Contract**.
+Deployment uses 1AM's proving, balancing, and submission providers in-browser.
+No funded server wallet or local proof server is required. The deployed contract
+address appears on the page after submission.
+Copy that address into `frontend/.env.local` as
+`NEXT_PUBLIC_CONTRACT_ADDRESS` for the issuer, student, employer, and admin portals.
 
 ### Testing & Integration
 Use the built-in testing suite to run end-to-end ZK transactions logic:

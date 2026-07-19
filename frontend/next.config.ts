@@ -26,6 +26,21 @@ const nextConfig: NextConfig = {
       config.resolve.alias = {
         ...config.resolve.alias,
         "isomorphic-ws": path.resolve(__dirname, "ws-stub.js"),
+        // Generated contract lives outside frontend and otherwise resolves
+        // Midnight runtime classes from root/node_modules. Keep one runtime
+        // instance in browser bundle; class identity matters for ledger-v8.
+        "@midnight-ntwrk/compact-runtime": path.resolve(
+          __dirname,
+          "node_modules/@midnight-ntwrk/compact-runtime/dist/index.js",
+        ),
+        "@midnight-ntwrk/onchain-runtime-v3": path.resolve(
+          __dirname,
+          "node_modules/@midnight-ntwrk/onchain-runtime-v3/midnight_onchain_runtime_wasm.js",
+        ),
+        "@midnight-ntwrk/ledger-v8": path.resolve(
+          __dirname,
+          "node_modules/@midnight-ntwrk/ledger-v8/midnight_ledger_wasm.js",
+        ),
       };
     }
     return config;
