@@ -99,6 +99,12 @@ function StatTile({ value, label, sub }: { value: string; label: string; sub: st
 
 // ─── page ────────────────────────────────────────────────────────────────────
 export default function HomePage() {
+  const [isLocal, setIsLocal] = useState(false);
+
+  useEffect(() => {
+    setIsLocal(['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname));
+  }, []);
+
   return (
     <>
       <style>{CSS}</style>
@@ -193,7 +199,7 @@ export default function HomePage() {
           <div className="sec-eyebrow">Access</div>
           <h2>Choose your portal</h2>
           <div className="portals-grid">
-            {PORTALS.map((p, i) => (
+            {PORTALS.filter(p => isLocal || p.href !== '/deploy').map((p, i) => (
               <Link
                 key={p.href} href={p.href}
                 className={`pcard ${p.cls}`}

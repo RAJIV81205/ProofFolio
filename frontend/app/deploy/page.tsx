@@ -1,18 +1,38 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { deployCredentialVerifier } from '@/lib/browserDeploy';
 
 export default function DeployPage() {
   const wallet = useWallet();
+  const [isLocal, setIsLocal] = useState<boolean | null>(null);
   const [adminSecretKey, setAdminSecretKey] = useState('');
   const [contractAddress, setContractAddress] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setIsLocal(['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname));
+  }, []);
+
+  if (isLocal === false) {
+    return (
+      <main className="app-shell">
+        <div className="glass-card max-w-2xl p-6 md:p-7">
+          <p className="pill">Local development only</p>
+          <h1 className="mt-3 text-2xl font-bold text-slate-900">Browser deployment unavailable</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Run ProofFolio locally to access the 1AM deployment portal.
+          </p>
+          <Link href="/" className="btn-primary mt-4 inline-block">← Back home</Link>
+        </div>
+      </main>
+    );
+  }
 
   const deploy = async () => {
     if (!wallet.connectedApi) return;
