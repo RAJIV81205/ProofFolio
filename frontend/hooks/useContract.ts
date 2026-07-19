@@ -340,14 +340,12 @@ function localMakeIssuerTrustAnchor(
 // Provider construction
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function build1amProviders(
+export async function build1amProviders(
   connectedAPI: ConnectedAPI,
   fallback: WalletServiceUriConfig | null,
 ) {
   const fromWallet = await connectedAPI.getConfiguration();
-  const expectedNet = (
-    process.env.NEXT_PUBLIC_MIDNIGHT_NETWORK ?? "preprod"
-  ).toLowerCase();
+  const expectedNet = "preprod";
   const networkId = fromWallet.networkId ?? fallback?.networkId ?? expectedNet;
   const indexerUri = fromWallet.indexerUri ?? fallback?.indexerUri ?? "";
   const indexerWsUri = fromWallet.indexerWsUri ?? fallback?.indexerWsUri ?? "";
@@ -385,12 +383,14 @@ async function build1amProviders(
 
   const shieldedAddress = await connectedAPI.getShieldedAddresses();
   const walletProvider = {
-    getCoinPublicKey: () => normalizeHex(shieldedAddress.shieldedCoinPublicKey),
-    getEncryptionPublicKey: () =>
-      normalizeHex(shieldedAddress.shieldedEncryptionPublicKey),
+    // Connector API returns these as Bech32m keys. Midnight.js expects the
+    // wallet-provider values unchanged; hex-normalizing them corrupts keys.
+    getCoinPublicKey: () => shieldedAddress.shieldedCoinPublicKey,
+    getEncryptionPublicKey: () => shieldedAddress.shieldedEncryptionPublicKey,
     async balanceTx(tx: any) {
       const hex = toHex(tx.serialize());
       const result = await connectedAPI.balanceUnsealedTransaction(hex);
+      if (!result?.tx) throw new Error("Wallet returned no balanced transaction.");
       const { Transaction } = await import("@midnight-ntwrk/ledger-v8");
       const pairs = result.tx.match(/.{2}/g) ?? [];
       return Transaction.deserialize(
@@ -404,8 +404,12 @@ async function build1amProviders(
 
   const midnightProvider = {
     async submitTx(tx: any) {
-      await connectedAPI.submitTransaction(toHex(tx.serialize()));
-      return tx.identifiers()[0];
+      const txHex = toHex(tx.serialize());
+      await connectedAPI.submitTransaction(txHex);
+      const identifiers = tx.identifiers();
+      const transactionId = identifiers?.[0];
+      if (!transactionId) throw new Error("Submitted transaction has no identifier.");
+      return transactionId;
     },
   };
 

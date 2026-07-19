@@ -305,7 +305,7 @@ export default function DeveloperIntegrationGuidePage() {
       <section className="glass-card mt-5 p-6 md:p-7">
         <h2 className="text-xl font-semibold text-slate-900">Developer Integration Checklist</h2>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-700">
-          <li>Detect wallet at window.midnight["1am"] and connect to preview or preprod.</li>
+          <li>Detect wallet at window.midnight["1am"] and connect to Midnight preprod.</li>
           <li>Read addresses, balances, and runtime configuration from ConnectedAPI.</li>
           <li>Build providers using wallet proving and wallet balanceUnsealedTransaction delegation.</li>
           <li>Load on-chain contract state before running transactions.</li>

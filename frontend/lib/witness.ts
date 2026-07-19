@@ -3,8 +3,8 @@
  *
  * KEY FIX: Every witness function MUST return [privateState, value].
  * The Midnight compact-runtime requires this tuple shape.
- * Returning just `value` (a plain Uint8Array) causes the proof server
- * to receive malformed circuit inputs → "Proof server check failed (400): bad input".
+ * Returning just `value` (a plain Uint8Array) causes malformed inputs in
+ * the browser proving provider.
  *
  * Docs reference:
  *   "Each witness function returns a tuple of the updated private state

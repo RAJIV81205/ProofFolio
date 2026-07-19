@@ -9,6 +9,13 @@ const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? '';
 // ─── data ───────────────────────────────────────────────────────────────────
 const PORTALS = [
   {
+    idx: '00', href: '/deploy', role: 'Deployment',
+    title: 'Browser Deployment',
+    desc:  'Deploy ProofFolio through the 1AM wallet on Midnight preprod. No server-side wallet required.',
+    stat:  '1AM sponsored deploy',
+    cls:   'p0',
+  },
+  {
     idx: '01', href: '/university', role: 'University',
     title: 'University Portal',
     desc:  'Issue cryptographic credential commitments on-chain. Student data never leaves your institution\'s infrastructure.',
@@ -58,7 +65,7 @@ const STEPS = [
   },
   {
     n: '02', role: 'Student', title: 'Generates a ZK proof',
-    desc: 'Proof runs locally via the Midnight proof server. A one-time nullifier is burned on-chain to prevent the same proof being reused by anyone.',
+    desc: 'Proof runs through the 1AM browser proving provider. A one-time nullifier is burned on-chain to prevent replay.',
   },
   {
     n: '03', role: 'Employer', title: 'Verifies the proof',
