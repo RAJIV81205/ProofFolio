@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  contract-compile:
+    name: Compile Compact contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies without lockfile
+        run: npm install --no-package-lock
+
+      - name: Compile contract
+        run: npm run compile
+
+  frontend-typecheck:
+    name: Typecheck frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install compiler dependencies without lockfile
+        run: npm install --no-package-lock
+
+      - name: Generate contract artifacts
+        run: npm run compile
+
+      - name: Install frontend dependencies without lockfile
+        working-directory: frontend
+        run: npm install --no-package-lock
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npx tsc --noEmit --pretty false
