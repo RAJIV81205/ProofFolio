@@ -1,7 +1,7 @@
 {
-  "compiler-version": "0.30.0",
-  "language-version": "0.22.0",
-  "runtime-version": "0.15.0",
+  "compiler-version": "0.31.1",
+  "language-version": "0.23.0",
+  "runtime-version": "0.16.0",
   "circuits": [
     {
       "name": "registerIssuer",
@@ -75,6 +75,46 @@
       }
     },
     {
+      "name": "updateCredential",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "oldPayload",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "oldNonce",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "newPayload",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "newNonce",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
       "name": "revokeCredential",
       "pure": false,
       "proof": true,
@@ -115,28 +155,47 @@
         {
           "name": "disclosedDegree",
           "type": {
-            "type-name": "Opaque",
-            "tsType": "string"
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
           }
         },
         {
           "name": "disclosedYear",
           "type": {
-            "type-name": "Opaque",
-            "tsType": "string"
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
           }
         },
         {
           "name": "disclosedInstitutionId",
           "type": {
-            "type-name": "Opaque",
-            "tsType": "string"
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
+          }
+        },
+        {
+          "name": "discloseDegree",
+          "type": {
+            "type-name": "Boolean"
+          }
+        },
+        {
+          "name": "discloseYear",
+          "type": {
+            "type-name": "Boolean"
+          }
+        },
+        {
+          "name": "discloseInstitutionId",
+          "type": {
+            "type-name": "Boolean"
           }
         },
         {
           "name": "currentTime",
           "type": {
-            "type-name": "Field"
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
           }
         }
       ],
@@ -189,6 +248,23 @@
     },
     {
       "name": "isCredentialIssued",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "commitment",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "isCredentialActive",
       "pure": false,
       "proof": true,
       "arguments": [
@@ -355,5 +431,202 @@
     }
   ],
   "contracts": [
+  ],
+  "ledger": [
+    {
+      "name": "authorizedIssuers",
+      "index": [
+        0,
+        0
+      ],
+      "exported": true,
+      "storage": "Set",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "issuerTrustAnchors",
+      "index": [
+        1,
+        0
+      ],
+      "exported": true,
+      "storage": "Set",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "credentialCommitments",
+      "index": [
+        1,
+        1
+      ],
+      "exported": true,
+      "storage": "HistoricMerkleTree",
+      "depth": 14,
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "issuedCredentials",
+      "index": [
+        1,
+        2
+      ],
+      "exported": true,
+      "storage": "Set",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "revokedCredentials",
+      "index": [
+        1,
+        3
+      ],
+      "exported": true,
+      "storage": "Set",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "usedPresentationNullifiers",
+      "index": [
+        1,
+        4
+      ],
+      "exported": true,
+      "storage": "Set",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "adminKey",
+      "index": [
+        1,
+        5
+      ],
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "issuanceCount",
+      "index": [
+        1,
+        6
+      ],
+      "exported": true,
+      "storage": "Counter"
+    },
+    {
+      "name": "verificationCount",
+      "index": [
+        1,
+        7
+      ],
+      "exported": true,
+      "storage": "Counter"
+    },
+    {
+      "name": "lastChallengeHash",
+      "index": [
+        1,
+        8
+      ],
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "lastDisclosedDegree",
+      "index": [
+        1,
+        9
+      ],
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Field"
+      }
+    },
+    {
+      "name": "lastDisclosedYear",
+      "index": [
+        1,
+        10
+      ],
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Field"
+      }
+    },
+    {
+      "name": "lastDisclosedInstitutionId",
+      "index": [
+        1,
+        11
+      ],
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Field"
+      }
+    },
+    {
+      "name": "lastDisclosedDegreePresent",
+      "index": [
+        1,
+        12
+      ],
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "lastDisclosedYearPresent",
+      "index": [
+        1,
+        13
+      ],
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "lastDisclosedInstitutionIdPresent",
+      "index": [
+        1,
+        14
+      ],
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Boolean"
+      }
+    }
   ]
 }
