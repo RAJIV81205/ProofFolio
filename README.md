@@ -2,6 +2,14 @@
 
 > **Tagline:** Verify qualifications, not personal data. Built on the Midnight Network.
 
+[![CI](https://github.com/RAJIV81205/ProofFolio/actions/workflows/ci.yml/badge.svg)](https://github.com/RAJIV81205/ProofFolio/actions/workflows/ci.yml)
+
+## Links
+
+- **Live app:** `ADD_LIVE_LINK`
+- **Demo video:** [Watch the demo](https://drive.google.com/file/d/1odZ8Ty0ZkfOIBKg_FxeahA8IwssD2sjN/view?usp=sharing)
+- **X:** `ADD_X_LINK`
+
 ---
 
 ## ❌ The Problem
