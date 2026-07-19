@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  COMPACT_VERSION: 0.31.1
+
 on:
   push:
   pull_request:
@@ -19,6 +22,13 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install Compact compiler
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf \
+            https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.1/compact-installer.sh | sh -s -- --quiet
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/compact" update "$COMPACT_VERSION"
+
       - name: Install dependencies without lockfile
         run: npm install --no-package-lock
 
@@ -37,6 +47,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Install Compact compiler
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf \
+            https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.1/compact-installer.sh | sh -s -- --quiet
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/compact" update "$COMPACT_VERSION"
 
       - name: Install compiler dependencies without lockfile
         run: npm install --no-package-lock

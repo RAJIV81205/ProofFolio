@@ -2,6 +2,12 @@
 FROM node:22-alpine AS build
 
 WORKDIR /app
+RUN apk add --no-cache curl
+RUN curl --proto '=https' --tlsv1.2 -LsSf \
+    https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.1/compact-installer.sh | sh -s -- --quiet
+ENV PATH="/root/.local/bin:${PATH}"
+RUN compact update 0.31.1
+
 COPY package.json ./package.json
 RUN npm install --no-package-lock
 
