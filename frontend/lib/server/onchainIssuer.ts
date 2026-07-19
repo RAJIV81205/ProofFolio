@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 
-const DEFAULT_PRIVATE_STATE_ID = 'credzk-api-private-state-preprod';
+const DEFAULT_PRIVATE_STATE_ID = 'ProofFolio-api-private-state-preprod';
 
 function normalizeHex(value: string): string {
   return value.trim().toLowerCase().replace(/^0x/, '');
@@ -25,7 +25,7 @@ function buildAttestationHashHex(input: {
   issuerPublicKeyHex: string;
 }): string {
   const digest = createHash('sha256')
-    .update('credzk:issuer-attestation:v1|', 'utf8')
+    .update('ProofFolio:issuer-attestation:v1|', 'utf8')
     .update(input.applicationId, 'utf8')
     .update('|', 'utf8')
     .update(input.institutionName.trim(), 'utf8')
@@ -63,7 +63,7 @@ export async function registerIssuerPublicKeyOnChain(input: {
 
   const contractAddress = resolveContractAddress();
   const privateStateId =
-    process.env.CREDZK_API_PRIVATE_STATE_ID?.trim() || DEFAULT_PRIVATE_STATE_ID;
+    process.env.PROOFFOLIO_API_PRIVATE_STATE_ID?.trim() || DEFAULT_PRIVATE_STATE_ID;
 
   const attestationHashHex = buildAttestationHashHex({
     applicationId: input.applicationId,

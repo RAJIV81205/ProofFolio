@@ -104,7 +104,7 @@ export default function HomePage() {
             <span className="brand-mark" aria-hidden>
               <svg viewBox="0 0 16 16"><path d="M8 2L2 6v8h4v-4h4v4h4V6L8 2z"/></svg>
             </span>
-            CredZK
+            ProofFolio
           </Link>
           <div className="nav-r">
             <a href="#how"      className="nl">How it works</a>
@@ -128,7 +128,7 @@ export default function HomePage() {
           </h1>
 
           <p className="hero-sub">
-            CredZK lets students prove their degrees to employers using zero-knowledge proofs —
+            ProofFolio lets students prove their degrees to employers using zero-knowledge proofs —
             without ever sharing names, grades, or institution details.
           </p>
 
@@ -224,7 +224,7 @@ export default function HomePage() {
             <span className="brand-mark sm" aria-hidden>
               <svg viewBox="0 0 16 16"><path d="M8 2L2 6v8h4v-4h4v4h4V6L8 2z"/></svg>
             </span>
-            CredZK
+            ProofFolio
           </div>
           <p className="fc">Built on Midnight · Powered by zero-knowledge proofs</p>
           <a href="https://midnight.network"      className="fl" target="_blank" rel="noreferrer">Midnight</a>

@@ -88,8 +88,8 @@ export async function GET(request: Request) {
 
     adminSecretKeyHex = deployment.adminKeyHex;
     source = 'deployment.json';
-  } else if (process.env.CREDZK_ADMIN_KEY) {
-    adminSecretKeyHex = process.env.CREDZK_ADMIN_KEY;
+  } else if (process.env.PROOFFOLIO_ADMIN_KEY) {
+    adminSecretKeyHex = process.env.PROOFFOLIO_ADMIN_KEY;
     source = 'server-env';
   }
 

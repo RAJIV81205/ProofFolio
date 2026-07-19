@@ -1,20 +1,20 @@
 "use client";
 
 /**
- * useContract.ts — CredZK v2  (FIXED)
+ * useContract.ts — ProofFolio v2  (FIXED)
  *
  * BUG FIXES applied in this file:
  *
  * 1. DUMMY WITNESSES — wrong return shape.
  *    Before: `(ctx) => [ctx.privateState, fallbackBytes(ctx)]`
- *    After:  proper CredZKPrivateState object carried through ctx.privateState,
+ *    After:  proper ProofFolioPrivateState object carried through ctx.privateState,
  *            witnesses return [privateState, value] matching the real witness signature.
  *
  * 2. PRIVATE STATE NOT INJECTED — CompiledContract.withWitnesses doesn't inject
  *    privateState into the context. You must use CompiledContract.withPrivateState(ps)
  *    so the runtime passes the correct privateState to every witness call.
  *
- * 3. CompiledContract.make("credzk", ...) — the contract name must match the
+ * 3. CompiledContract.make("ProofFolio", ...) — the contract name must match the
  *    file name used by compactc, which is "credential_verifier" (the .compact filename
  *    without extension, lowercased). Check your compiled output's index.js top line:
  *    `__compactRuntime.checkContractName('credential_verifier')` — use that string.
@@ -37,7 +37,7 @@ import {
   generateNonce,
   packCredential,
   type CredentialData,
-  type CredZKPrivateState,
+  type ProofFolioPrivateState,
 } from "@/lib/witness";
 import type { WalletServiceUriConfig } from "@/hooks/useWallet";
 import type { ConnectedAPI } from "@midnight-ntwrk/dapp-connector-api";
@@ -275,7 +275,7 @@ async function queryTxIdentifiersByHash(
 
 function createDummyWitnesses() {
   const empty = createEmptyPrivateState();
-  const stub = (ctx: any): [CredZKPrivateState, Uint8Array] => [
+  const stub = (ctx: any): [ProofFolioPrivateState, Uint8Array] => [
     ctx.privateState ?? empty,
     new Uint8Array(32),
   ];
@@ -457,7 +457,7 @@ export function useContract(
   // FIX 3: CONTRACT_NAME must match the compactc output filename
   // FIX 2: withPrivateState injects the correct privateState into witness contexts
   const getCompiledContract = useCallback(
-    (witnesses: any, privateState: CredZKPrivateState) => {
+    (witnesses: any, privateState: ProofFolioPrivateState) => {
       return CompiledContract.make(CONTRACT_NAME, Contract)
         .pipe(CompiledContract.withWitnesses(witnesses));
     },
@@ -598,7 +598,7 @@ export function useContract(
 
         // FIX 1+2: real witnesses with correct tuple shape + private state
         const witnesses = createIssuerWitnesses({ issuerSecretKey: issuerSk });
-        const privateState: CredZKPrivateState = {
+        const privateState: ProofFolioPrivateState = {
           ...createEmptyPrivateState(),
           issuerSecretKey: issuerSk,
         };
@@ -666,7 +666,7 @@ export function useContract(
           credentialNonce: nonce,
           credentialIssuerPk: issuerPk,
         });
-        const privateState: CredZKPrivateState = {
+        const privateState: ProofFolioPrivateState = {
           ...createEmptyPrivateState(),
           studentSecretKey: studentSk,
           credentialPayload: payload,
@@ -734,7 +734,7 @@ export function useContract(
         const attHash = bytes32FromValue(attestationHash, "attestation hash");
 
         const witnesses = createAdminWitnesses({ adminSecretKey: adminSk });
-        const privateState: CredZKPrivateState = {
+        const privateState: ProofFolioPrivateState = {
           ...createEmptyPrivateState(),
           adminSecretKey: adminSk,
         };
@@ -767,7 +767,7 @@ export function useContract(
         const issuerPk = bytes32FromValue(issuerPublicKey, "issuer public key");
 
         const witnesses = createAdminWitnesses({ adminSecretKey: adminSk });
-        const privateState: CredZKPrivateState = {
+        const privateState: ProofFolioPrivateState = {
           ...createEmptyPrivateState(),
           adminSecretKey: adminSk,
         };
@@ -806,7 +806,7 @@ export function useContract(
         const nonce = bytes32FromValue(nonceHex, "credential nonce");
 
         const witnesses = createIssuerWitnesses({ issuerSecretKey: issuerSk });
-        const privateState: CredZKPrivateState = {
+        const privateState: ProofFolioPrivateState = {
           ...createEmptyPrivateState(),
           issuerSecretKey: issuerSk,
         };

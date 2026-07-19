@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 
 import { submitCallTx } from "@midnight-ntwrk/midnight-js/contracts";
 import {
-  CredZK,
+  ProofFolio,
   createProviders,
   createWallet,
   makeCompiledContractForDeployment,
@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEPLOYMENT_FILE = path.join(PROJECT_ROOT, "deployment.json");
 const FRONTEND_ENV_FILE = path.join(PROJECT_ROOT, "frontend/.env.local");
-const DEFAULT_PRIVATE_STATE_ID = "credzk-register-issuer-state";
+const DEFAULT_PRIVATE_STATE_ID = "ProofFolio-register-issuer-state";
 
 function parseArgs(argv) {
   const out = {};
@@ -112,7 +112,7 @@ function deriveIssuerPublicKey(issuerSecretKey) {
     findCredentialPath: () => [null, { leaf: zero, path: [] }],
   };
 
-  const contract = new CredZK.Contract(dummyWitnesses);
+  const contract = new ProofFolio.Contract(dummyWitnesses);
   return contract._issuerPublicKey_0(issuerSecretKey);
 }
 
@@ -125,7 +125,7 @@ node scripts/register-issuer.mjs \\
   [--private-state-id <value>] \\
   [--dry-run true]\n
 Notes:
-- MIDNIGHT_OPERATOR_SEED and CREDZK_ADMIN_KEY are required for non-dry-run.
+- MIDNIGHT_OPERATOR_SEED and PROOFFOLIO_ADMIN_KEY are required for non-dry-run.
 - If --attestation-hash is omitted, a random 32-byte value is generated.\n`);
 }
 
@@ -158,18 +158,18 @@ async function main() {
 
   const contractAddress = readContractAddress(args);
   const operatorSeed = process.env.MIDNIGHT_OPERATOR_SEED;
-  const adminKey = process.env.CREDZK_ADMIN_KEY;
+  const adminKey = process.env.PROOFFOLIO_ADMIN_KEY;
 
   if (!operatorSeed) {
     throw new Error("MIDNIGHT_OPERATOR_SEED is required for on-chain registration.");
   }
   if (!adminKey) {
-    throw new Error("CREDZK_ADMIN_KEY is required for on-chain registration.");
+    throw new Error("PROOFFOLIO_ADMIN_KEY is required for on-chain registration.");
   }
 
   const privateStateId =
     args["private-state-id"] ??
-    process.env.CREDZK_API_PRIVATE_STATE_ID ??
+    process.env.PROOFFOLIO_API_PRIVATE_STATE_ID ??
     DEFAULT_PRIVATE_STATE_ID;
 
   console.log("Using contract:", contractAddress);
@@ -185,7 +185,7 @@ async function main() {
     throw new Error(`No contract state found for address '${contractAddress}'.`);
   }
 
-  const currentLedger = CredZK.ledger(contractState);
+  const currentLedger = ProofFolio.ledger(contractState);
   if (currentLedger.authorizedIssuers.member(issuerPublicKey)) {
     console.log("Issuer is already authorized on-chain. Skipping registerIssuer.");
     return;

@@ -12,13 +12,13 @@ type MongooseCache = {
 };
 
 declare global {
-  var __credzkMongooseCache: MongooseCache | undefined;
+  var __ProofFolioMongooseCache: MongooseCache | undefined;
 }
 
-const cache: MongooseCache = global.__credzkMongooseCache ?? { conn: null, promise: null };
+const cache: MongooseCache = global.__ProofFolioMongooseCache ?? { conn: null, promise: null };
 
-if (!global.__credzkMongooseCache) {
-  global.__credzkMongooseCache = cache;
+if (!global.__ProofFolioMongooseCache) {
+  global.__ProofFolioMongooseCache = cache;
 }
 
 export async function connectMongo() {
@@ -26,7 +26,7 @@ export async function connectMongo() {
 
   if (!cache.promise) {
     cache.promise = mongoose.connect(MONGODB_URI, {
-      dbName: process.env.MONGODB_DB ?? 'credzk',
+      dbName: process.env.MONGODB_DB ?? 'ProofFolio',
       autoIndex: true,
     });
   }

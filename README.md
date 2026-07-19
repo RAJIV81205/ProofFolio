@@ -1,4 +1,4 @@
-# CredZK: Privacy-Preserving Academic Credential Verification
+# ProofFolio: Privacy-Preserving Academic Credential Verification
 
 > **Tagline:** Verify qualifications, not personal data. Built on the Midnight Network.
 
@@ -14,7 +14,7 @@ Credential fraud is a massive global issue, but current verification systems are
 
 ## ✅ Our Solution
 
-**CredZK** is a privacy-first credential verification protocol built using **Zero-Knowledge Proofs (ZKPs)** on the **Midnight Network**.
+**ProofFolio** is a privacy-first credential verification protocol built using **Zero-Knowledge Proofs (ZKPs)** on the **Midnight Network**.
 It allows universities to issue tamper-proof credentials on-chain. Students can then generate local cryptographic proofs to prove their qualifications to employers *without* revealing their actual personal data.
 
 **One proof. Zero data exposure.**
@@ -48,7 +48,7 @@ It allows universities to issue tamper-proof credentials on-chain. Students can 
 
 ## 🔐 Privacy Functions
 
-CredZK leverages Midnight's data-protecting architecture:
+ProofFolio leverages Midnight's data-protecting architecture:
 * **Selective Disclosure:** Students only prove the claims the employer asked for.
 * **Local Witness Execution:** Private data (student secret keys, raw credential JSON) stays fully local in the wallet/browser.
 * **Zero-Knowledge Proofs:** The network verifies the truth of a statement ("This student holds a valid degree") without ever seeing the inputs that make it true.

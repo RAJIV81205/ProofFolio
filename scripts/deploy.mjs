@@ -31,8 +31,8 @@ const CONTRACT_ARTIFACT = path.join(
 );
 const DEPLOYMENT_FILE = path.join(PROJECT_ROOT, "deployment.json");
 const FRONTEND_ENV_FILE = path.join(PROJECT_ROOT, "frontend/.env.local");
-const DEFAULT_PRIVATE_STATE_ID = "credzk-private-state";
-const PROOF_SERVER_CONTAINER = "credzk-proof-server";
+const DEFAULT_PRIVATE_STATE_ID = "ProofFolio-private-state";
+const PROOF_SERVER_CONTAINER = "ProofFolio-proof-server";
 const DEFAULT_MIN_DUST_FOR_DEPLOY = 300_000_000_000_000n;
 
 process.on("unhandledRejection", (reason) => {
@@ -249,7 +249,7 @@ async function resolveSeed(rl, args) {
 
 function resolveAdminKey(args) {
   if (args["admin-key"]) return sanitizeSeed(args["admin-key"]);
-  if (process.env.CREDZK_ADMIN_KEY) return sanitizeSeed(process.env.CREDZK_ADMIN_KEY);
+  if (process.env.PROOFFOLIO_ADMIN_KEY) return sanitizeSeed(process.env.PROOFFOLIO_ADMIN_KEY);
   return randomBytes(32).toString("hex");
 }
 
@@ -263,7 +263,7 @@ async function main() {
   const waitDustMs = Number(args["dust-timeout-ms"] ?? 5 * 60_000);
   const minDust = BigInt(
     args["min-dust"] ??
-      process.env.CREDZK_MIN_DUST ??
+      process.env.PROOFFOLIO_MIN_DUST ??
       DEFAULT_MIN_DUST_FOR_DEPLOY.toString(),
   );
   const privateStateId = args["private-state-id"] ?? DEFAULT_PRIVATE_STATE_ID;
@@ -274,7 +274,7 @@ async function main() {
   const rl = readline.createInterface({ input: stdin, output: stdout });
   let walletCtx;
   try {
-    console.log("\n── CredZK One-Click Deploy ──\n");
+    console.log("\n── ProofFolio One-Click Deploy ──\n");
     console.log(`Network: ${MIDNIGHT_NETWORK} (${CONFIG.networkLabel})`);
     console.log(`Profile: ${MIDNIGHT_PROFILE}`);
     console.log(`Wallet SDK Network ID: ${SDK_NETWORK_ID}`);
@@ -313,7 +313,7 @@ async function main() {
     const contractAddress = deployed.deployTxData.public.contractAddress;
     const txHash = deployed.deployTxData.public.txHash;
     const deploymentRecord = {
-      app: "CredZK",
+      app: "ProofFolio",
       network: MIDNIGHT_NETWORK,
       contractAddress,
       deployTxHash: txHash,

@@ -111,7 +111,7 @@ export const zkConfigPath = path.resolve(
   "credential_verifier",
 );
 const contractPath = path.join(zkConfigPath, "contract", "index.js");
-export const CredZK = await import(pathToFileURL(contractPath).href);
+export const ProofFolio = await import(pathToFileURL(contractPath).href);
 
 export function toBytes32FromHex(hex) {
   const normalized = hex.trim().toLowerCase().replace(/^0x/, "");
@@ -219,7 +219,7 @@ export function createDeploymentWitnesses(adminSecretKeyBytes) {
 }
 
 export function makeCompiledContractForDeployment(adminSecretKeyBytes) {
-  return CompiledContract.make("credzk", CredZK.Contract).pipe(
+  return CompiledContract.make("ProofFolio", ProofFolio.Contract).pipe(
     CompiledContract.withWitnesses(createDeploymentWitnesses(adminSecretKeyBytes)),
     CompiledContract.withCompiledFileAssets(zkConfigPath),
   );

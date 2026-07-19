@@ -191,11 +191,11 @@ export async function GET() {
     'warning',
   );
 
-  if (!normalize(envValues.CREDZK_ADMIN_KEY)) {
-    errors.push('CREDZK_ADMIN_KEY is missing.');
+  if (!normalize(envValues.PROOFFOLIO_ADMIN_KEY)) {
+    errors.push('PROOFFOLIO_ADMIN_KEY is missing.');
   }
-  if (!normalize(envValues.CREDZK_AUTH_SECRET)) {
-    warnings.push('CREDZK_AUTH_SECRET is missing.');
+  if (!normalize(envValues.PROOFFOLIO_AUTH_SECRET)) {
+    warnings.push('PROOFFOLIO_AUTH_SECRET is missing.');
   }
 
   return NextResponse.json({

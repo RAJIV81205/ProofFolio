@@ -52,7 +52,7 @@ export default function AdminLoginPage() {
       <div className="mx-auto max-w-xl">
         <div className="glass-card p-7 md:p-10">
           <p className="pill">Secure Admin Access</p>
-          <h1 className="mt-4 text-3xl font-bold">CredZK Admin Login</h1>
+          <h1 className="mt-4 text-3xl font-bold">ProofFolio Admin Login</h1>
           <p className="mt-2 text-sm text-slate-600">
             Only configured administrators can manage issuer wallets and access issuance controls.
           </p>

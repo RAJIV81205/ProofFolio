@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { createWallet, waitForWalletSync, createProviders, CredZK, toBytes32FromHex } from './scripts/midnight-utils.mjs';
+import { createWallet, waitForWalletSync, createProviders, ProofFolio, toBytes32FromHex } from './scripts/midnight-utils.mjs';
 
 function parseEnv(path) {
   const env = {};
@@ -19,13 +19,13 @@ async function run() {
   
   const w = await createWallet(operatorSeed);
   await waitForWalletSync(w, 20000).catch(()=>{});
-  const p = await createProviders(w, 'credzk-api-private-state-preprod');
+  const p = await createProviders(w, 'ProofFolio-api-private-state-preprod');
   const s = await p.publicDataProvider.queryContractState(addr);
   if (!s) { console.log('State is null'); process.exit(1); }
   
-  const l = CredZK.ledger(s.data);
+  const l = ProofFolio.ledger(s.data);
   const secret = '0000000000000000000000000000000000000000000000000000000000000001';
-  const c = new CredZK.Contract({
+  const c = new ProofFolio.Contract({
     adminSecretKey: ()=>[null, new Uint8Array(32)],
     issuerSecretKey: ()=>[null, new Uint8Array(32)],
     studentSecretKey: ()=>[null, new Uint8Array(32)],

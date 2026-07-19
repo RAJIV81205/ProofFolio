@@ -1,7 +1,7 @@
 import { createHmac, createHash, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 
-export const ADMIN_SESSION_COOKIE = 'credzk_admin_session';
+export const ADMIN_SESSION_COOKIE = 'ProofFolio_admin_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
 interface AdminSessionPayload {

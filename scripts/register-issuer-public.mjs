@@ -5,7 +5,7 @@ import { randomBytes } from 'node:crypto';
 
 import { submitCallTx } from '@midnight-ntwrk/midnight-js/contracts';
 import {
-  CredZK,
+  ProofFolio,
   createProviders,
   createWallet,
   makeCompiledContractForDeployment,
@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DEPLOYMENT_FILE = path.join(PROJECT_ROOT, 'deployment.json');
 const FRONTEND_ENV_FILE = path.join(PROJECT_ROOT, 'frontend/.env.local');
-const DEFAULT_PRIVATE_STATE_ID = 'credzk-api-private-state-preprod';
+const DEFAULT_PRIVATE_STATE_ID = 'ProofFolio-api-private-state-preprod';
 
 function parseArgs(argv) {
   const out = {};
@@ -98,18 +98,18 @@ async function main() {
 
   const contractAddress = readContractAddress(args);
   const operatorSeed = process.env.MIDNIGHT_OPERATOR_SEED;
-  const adminKey = process.env.CREDZK_ADMIN_KEY;
+  const adminKey = process.env.PROOFFOLIO_ADMIN_KEY;
 
   if (!operatorSeed) {
     throw new Error('MIDNIGHT_OPERATOR_SEED is required for on-chain registration.');
   }
   if (!adminKey) {
-    throw new Error('CREDZK_ADMIN_KEY is required for on-chain registration.');
+    throw new Error('PROOFFOLIO_ADMIN_KEY is required for on-chain registration.');
   }
 
   const privateStateId =
     args['private-state-id'] ??
-    process.env.CREDZK_API_PRIVATE_STATE_ID ??
+    process.env.PROOFFOLIO_API_PRIVATE_STATE_ID ??
     DEFAULT_PRIVATE_STATE_ID;
   const syncTimeoutMs = Number(process.env.MIDNIGHT_OPERATOR_SYNC_TIMEOUT_MS ?? 300000);
 
@@ -125,7 +125,7 @@ async function main() {
   const issuerPublicKey = toBytes32FromHex(issuerPublicKeyHex);
   const attestationHash = toBytes32FromHex(attestationHashHex);
 
-  const currentLedger = CredZK.ledger(contractState);
+  const currentLedger = ProofFolio.ledger(contractState);
   if (currentLedger.authorizedIssuers.member(issuerPublicKey)) {
     const result = {
       issuerPublicKeyHex,

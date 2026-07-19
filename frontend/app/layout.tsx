@@ -8,7 +8,7 @@ const sans  = Outfit({ subsets: ['latin'], weight: ['300','400','500','600','700
 const mono  = JetBrains_Mono({ subsets: ['latin'], weight: ['400','500'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
-  title: 'CredZK | Privacy-Preserving Credential Verification',
+  title: 'ProofFolio | Privacy-Preserving Credential Verification',
   description: 'Verify qualifications, not personal data. Built for Midnight with zero-knowledge proofs.',
 };
 

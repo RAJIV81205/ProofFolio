@@ -1,5 +1,5 @@
 /**
- * witness.ts — CredZK v2  (FIXED)
+ * witness.ts — ProofFolio v2  (FIXED)
  *
  * KEY FIX: Every witness function MUST return [privateState, value].
  * The Midnight compact-runtime requires this tuple shape.
@@ -17,7 +17,7 @@ import type { WitnessContext } from '@midnight-ntwrk/compact-runtime';
 // Private state shape — carried through every witness call
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type CredZKPrivateState = {
+export type ProofFolioPrivateState = {
   readonly studentSecretKey:   Uint8Array;
   readonly issuerSecretKey:    Uint8Array;
   readonly adminSecretKey:     Uint8Array;
@@ -26,7 +26,7 @@ export type CredZKPrivateState = {
   readonly credentialIssuerPk: Uint8Array;
 };
 
-export const createEmptyPrivateState = (): CredZKPrivateState => ({
+export const createEmptyPrivateState = (): ProofFolioPrivateState => ({
   studentSecretKey:   new Uint8Array(32),
   issuerSecretKey:    new Uint8Array(32),
   adminSecretKey:     new Uint8Array(32),
@@ -139,7 +139,7 @@ export interface StudentWitnessInputs {
 }
 
 export function createStudentWitnesses(inputs: StudentWitnessInputs) {
-  const ps: CredZKPrivateState = {
+  const ps: ProofFolioPrivateState = {
     ...createEmptyPrivateState(),
     studentSecretKey:   inputs.studentSecretKey,
     credentialPayload:  inputs.credentialPayload,
@@ -149,19 +149,19 @@ export function createStudentWitnesses(inputs: StudentWitnessInputs) {
 
   return {
     // ✅ FIXED: returns [privateState, value] tuple
-    studentSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    studentSecretKey: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.studentSecretKey],
 
-    credentialPayload: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialPayload: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialPayload],
 
-    credentialNonce: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialNonce: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialNonce],
 
-    credentialIssuerPk: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialIssuerPk: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialIssuerPk],
 
-    findCredentialPath: (ctx: WitnessContext<any, CredZKPrivateState>, commitment: Uint8Array) => {
+    findCredentialPath: (ctx: WitnessContext<any, ProofFolioPrivateState>, commitment: Uint8Array) => {
       const tree = ctx.ledger.credentialCommitments;
       const path = tree.findPathForLeaf(commitment);
       if (!path) throw new Error(
@@ -174,9 +174,9 @@ export function createStudentWitnesses(inputs: StudentWitnessInputs) {
     },
 
     // stubs — not used in this circuit but required by Contract constructor
-    adminSecretKey:  (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    adminSecretKey:  (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.adminSecretKey],
-    issuerSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    issuerSecretKey: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.issuerSecretKey],
   };
 }
@@ -188,27 +188,27 @@ export interface IssuerWitnessInputs {
 }
 
 export function createIssuerWitnesses(inputs: IssuerWitnessInputs) {
-  const ps: CredZKPrivateState = {
+  const ps: ProofFolioPrivateState = {
     ...createEmptyPrivateState(),
     issuerSecretKey: inputs.issuerSecretKey,
   };
 
   return {
-    issuerSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    issuerSecretKey: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.issuerSecretKey],
 
     // stubs
-    adminSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    adminSecretKey: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.adminSecretKey],
-    studentSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    studentSecretKey: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.studentSecretKey],
-    credentialPayload: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialPayload: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialPayload],
-    credentialNonce: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialNonce: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialNonce],
-    credentialIssuerPk: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialIssuerPk: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialIssuerPk],
-    findCredentialPath: (ctx: WitnessContext<any, CredZKPrivateState>, _commitment: Uint8Array) =>
+    findCredentialPath: (ctx: WitnessContext<any, ProofFolioPrivateState>, _commitment: Uint8Array) =>
       [ctx.privateState, { value: _commitment, path: [] }],
   };
 }
@@ -220,27 +220,27 @@ export interface AdminWitnessInputs {
 }
 
 export function createAdminWitnesses(inputs: AdminWitnessInputs) {
-  const ps: CredZKPrivateState = {
+  const ps: ProofFolioPrivateState = {
     ...createEmptyPrivateState(),
     adminSecretKey: inputs.adminSecretKey,
   };
 
   return {
-    adminSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    adminSecretKey: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.adminSecretKey],
 
     // stubs
-    issuerSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    issuerSecretKey: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.issuerSecretKey],
-    studentSecretKey: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    studentSecretKey: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.studentSecretKey],
-    credentialPayload: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialPayload: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialPayload],
-    credentialNonce: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialNonce: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialNonce],
-    credentialIssuerPk: (ctx: WitnessContext<any, CredZKPrivateState>): [CredZKPrivateState, Uint8Array] =>
+    credentialIssuerPk: (ctx: WitnessContext<any, ProofFolioPrivateState>): [ProofFolioPrivateState, Uint8Array] =>
       [ctx.privateState, ctx.privateState.credentialIssuerPk],
-    findCredentialPath: (ctx: WitnessContext<any, CredZKPrivateState>, _commitment: Uint8Array) =>
+    findCredentialPath: (ctx: WitnessContext<any, ProofFolioPrivateState>, _commitment: Uint8Array) =>
       [ctx.privateState, { value: _commitment, path: [] }],
   };
 }

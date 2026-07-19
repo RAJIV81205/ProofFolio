@@ -1,14 +1,14 @@
 {
-  "name": "credzk",
+  "name": "ProofFolio",
   "version": "1.0.0",
   "description": "ZK Academic Credential Verifier — Midnight Hackathon",
   "private": true,
   "type": "module",
   "scripts": {
     "compile": "compact compile contracts/credential_verifier.compact contracts/managed/credential_verifier && mkdir -p frontend/contracts/managed/credential_verifier/contract && cp contracts/managed/credential_verifier/contract/index.js frontend/contracts/managed/credential_verifier/contract/index.js && cp contracts/managed/credential_verifier/contract/index.d.ts frontend/contracts/managed/credential_verifier/contract/index.d.ts",
-    "start-proof-server": "docker run --rm --name credzk-proof-server -p 6300:6300 midnightntwrk/proof-server:8.0.3 -- midnight-proof-server -v",
+    "start-proof-server": "docker run --rm --name ProofFolio-proof-server -p 6300:6300 midnightntwrk/proof-server:8.0.3 -- midnight-proof-server -v",
     "deploy": "node scripts/deploy.mjs",
-    "deploy:non-interactive": "node scripts/deploy.mjs --seed $MIDNIGHT_SEED --admin-key $CREDZK_ADMIN_KEY",
+    "deploy:non-interactive": "node scripts/deploy.mjs --seed $MIDNIGHT_SEED --admin-key $PROOFFOLIO_ADMIN_KEY",
     "register-issuer": "node scripts/register-issuer.mjs",
     "register-issuer:dry-run": "node scripts/register-issuer.mjs --dry-run true",
     "dev": "cd frontend && npm run dev",
