@@ -10,6 +10,19 @@
 - **Demo video:** [Watch the demo](https://drive.google.com/file/d/1odZ8Ty0ZkfOIBKg_FxeahA8IwssD2sjN/view?usp=sharing)
 - **X:** `ADD_X_LINK`
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/home.png" alt="ProofFolio home page" width="100%"><br><sub>Home page</sub></td>
+    <td><img src="docs/screenshots/university.png" alt="University portal" width="100%"><br><sub>University portal</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/student.png" alt="Student portal" width="100%"><br><sub>Student portal</sub></td>
+    <td><img src="docs/screenshots/employer.png" alt="Employer portal" width="100%"><br><sub>Employer portal</sub></td>
+  </tr>
+</table>
+
 ---
 
 ## ❌ The Problem
