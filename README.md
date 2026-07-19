@@ -14,12 +14,12 @@
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/home.png" alt="ProofFolio home page" width="100%"><br><sub>Home page</sub></td>
-    <td><img src="docs/screenshots/university.png" alt="University portal" width="100%"><br><sub>University portal</sub></td>
+    <td><img width="1876" height="1005" alt="image" src="https://github.com/user-attachments/assets/3d4b67ca-271b-4e35-9a11-89a0de01a17b" /><br><sub>Home page</sub></td>
+    <td><img width="1876" height="1005" alt="image" src="https://github.com/user-attachments/assets/87ef94ca-a480-43da-98bc-ad5d4f821ab1" /><br><sub>University portal</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/student.png" alt="Student portal" width="100%"><br><sub>Student portal</sub></td>
-    <td><img src="docs/screenshots/employer.png" alt="Employer portal" width="100%"><br><sub>Employer portal</sub></td>
+    <td><img width="1876" height="1005" alt="image" src="https://github.com/user-attachments/assets/96b69809-e025-406c-a4ec-a2dceaacc060" /><br><sub>How It Works</sub></td>
+    <td><img width="1876" height="1005" alt="image" src="https://github.com/user-attachments/assets/9ca93635-ec0f-4779-a9c0-7ea3ee2484d7" /><br><sub>CI passing</sub></td>
   </tr>
 </table>
 
