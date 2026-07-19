@@ -8,7 +8,7 @@
 
 - **Live app:** [Open ProofFolio](https://proof-folio-ashy.vercel.app/)
 - **Demo video:** [Watch the demo](https://drive.google.com/file/d/1odZ8Ty0ZkfOIBKg_FxeahA8IwssD2sjN/view?usp=sharing)
-- **X:** `ADD_X_LINK`
+
 
 ## Screenshots
 
